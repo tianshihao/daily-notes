@@ -2,14 +2,16 @@
   "name": "daily-notes",
   "displayName": "Daily Notes",
   "description": "Write daily notes using VS Code.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "engines": {
     "vscode": "^1.90.0"
   },
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./dist/extension.js",
   "repository": {
     "type": "git",
@@ -36,8 +38,27 @@
       {
         "command": "daily-notes.openTodaysDailyNote",
         "title": "Open Today's Daily Note"
+      },
+      {
+        "command": "daily-notes.setupNotebook",
+        "title": "Setup Notebook"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Daily Notes",
+      "properties": {
+        "dailyNotes.notebookName": {
+          "type": "string",
+          "default": "",
+          "description": "The folder where daily notes are stored."
+        },
+        "dailyNotes.notebookDirectory": {
+          "type": "string",
+          "default": "",
+          "description": "The directory where daily notes are stored."
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run package",

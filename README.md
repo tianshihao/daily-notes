@@ -26,6 +26,10 @@ There are no known issues at the moment. If you encounter any problems, please r
 
 Initial release of the "Daily Notes" extension.
 
+### 0.0.2
+
+Add support for workspace.
+
 ---
 
 ## Following extension guidelines
