@@ -1,0 +1,25 @@
+# Ignore build output
+out/
+dist/
+
+# Ignore dependencies
+node_modules/
+
+# Ignore environment settings
+.env
+
+# Ignore VS Code settings
+.vscode/
+
+# Ignore npm debug logs
+npm-debug.log*
+
+# Ignore yarn debug logs
+yarn-debug.log*
+
+# Ignore yarn error logs
+yarn-error.log*
+
+# Ignore package lock files (optional)
+package-lock.json
+yarn.lock
