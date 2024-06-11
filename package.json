@@ -15,6 +15,17 @@
     "type": "git",
     "url": "https://github.com/tianshihao/daily-notes"
   },
+  "publisher": "tianshihao",
+  "author": {
+    "email": "shihao.tian@outlook.com",
+    "name": "Shihao Tian"
+  },
+  "contributors": [
+    {
+      "name": "Shihao Tian",
+      "email": "shihao.tian@outlook.com"
+    }
+  ],
   "license": "MIT",
   "contributes": {
     "commands": [
