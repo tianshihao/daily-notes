@@ -33,18 +33,48 @@ export function activate(context: vscode.ExtensionContext) {
     }
   );
 
-  const setNoteBookDisposable = vscode.commands.registerCommand(
+  const setNotebookDisposable = vscode.commands.registerCommand(
     "daily-notes.setupNotebook",
     () => {
       setupNotebook();
     }
   );
 
+  const insertTimestampDisposable = vscode.commands.registerCommand(
+    "daily-notes.insertTimestamp",
+    () => {
+      insertTimestamp();
+    }
+  );
+
   context.subscriptions.push(
     helloWorldDisposable,
     openTodaysDailyNoteDisposable,
-    setNoteBookDisposable
+    setNotebookDisposable,
+    insertTimestampDisposable
   );
+}
+
+function insertTimestamp() {
+  const editor = vscode.window.activeTextEditor;
+
+  if (editor) {
+    const selection = editor.selection;
+    const date = new Date();
+    const timestamp = date.toLocaleString("zh-CN", {
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+      hour: "numeric",
+      minute: "numeric",
+      second: "numeric",
+      hour12: false,
+    });
+
+    editor.edit((editBuilder) => {
+      editBuilder.insert(selection.start, timestamp);
+    });
+  }
 }
 
 // This method is called when your extension is deactivated
