@@ -15,18 +15,24 @@ The "Daily Notes" extension provides the following feature:
 ### Editing
 
 | Feature                  | Status |
-| ------------------------ | ------ |
-| Create daily note        | ✅     |
-| Insert date/time         | 💡     |
-| Templates                | 💡     |
-| Word count on status bar | 💡     |
+| ------------------------ | :----: |
+| Create daily note        |   ✅   |
+| Insert date/time         |   ✅   |
+| Templates                |   💡   |
+| Word count on status bar |   💡   |
 
-### Management
+### Statistics
 
-| Feature    | Status |
-| ---------- | ------ |
-| Word cloud | 💡     |
-| Statistics | 💡     |
+| Feature                 | Status |
+| ----------------------- | :----: |
+| Word cloud              |   💡   |
+| Statistics something... |   💡   |
+
+### Source Control
+
+| Feature     | Status |
+| ----------- | :----: |
+| Auto Commit |   💡   |
 
 ## Requirements
 
