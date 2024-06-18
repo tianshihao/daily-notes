@@ -8,6 +8,8 @@ The "Daily Notes" extension provides the following feature:
 
 - **Create Daily Note**: With a single command, you can create a new note for the current day. This note is named with today's date and opened in a new editor tab.
 
+- **Insert Date/Time**: You can insert the current date and time into the note with a single command.
+
 ## Roadmap
 
 ### Editing
@@ -47,6 +49,10 @@ Initial release of the "Daily Notes" extension.
 ### 0.0.2
 
 Add support for workspace.
+
+### 0.0.3
+
+Add support for inserting date/time.
 
 ---
 
