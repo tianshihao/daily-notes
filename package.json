@@ -43,7 +43,13 @@
       },
       {
         "command": "daily-notes.setupNotebook",
-        "title": "Setup Notebook"
+        "title": "Setup Notebook",
+        "category": "Daily Notes"
+      },
+      {
+        "command": "daily-notes.insertTimestamp",
+        "title": "Insert Timestamp",
+        "category": "Daily Notes"
       }
     ],
     "configuration": {
