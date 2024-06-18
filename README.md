@@ -8,6 +8,24 @@ The "Daily Notes" extension provides the following feature:
 
 - **Create Daily Note**: With a single command, you can create a new note for the current day. This note is named with today's date and opened in a new editor tab.
 
+## Roadmap
+
+### Editing
+
+| Feature                  | Status |
+| ------------------------ | ------ |
+| Create daily note        | ✅     |
+| Insert date/time         | 💡     |
+| Templates                | 💡     |
+| Word count on status bar | 💡     |
+
+### Management
+
+| Feature    | Status |
+| ---------- | ------ |
+| Word cloud | 💡     |
+| Statistics | 💡     |
+
 ## Requirements
 
 There are no specific requirements or dependencies for this extension.
