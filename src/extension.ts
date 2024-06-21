@@ -1,15 +1,17 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
-import * as vscode from "vscode";
+import { configManager } from "./config_manager/config_manager";
+import { gitService } from "./git_service/git_service";
 import * as fs from "fs";
 import * as path from "path";
-import { configManager } from "./manager/manager";
+import * as vscode from "vscode";
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
   console.log('Congratulations, your extension "daily-notes" is now active!');
 
+  console.log("extension activated.");
   init();
 
   context.subscriptions.push(configManager);
@@ -47,11 +49,27 @@ export function activate(context: vscode.ExtensionContext) {
     }
   );
 
+  const commitDisposable = vscode.commands.registerCommand(
+    "daily-notes.commit",
+    () => {
+      commit();
+    }
+  );
+
+  const syncDisposable = vscode.commands.registerCommand(
+    "daily-notes.sync",
+    () => {
+      sync();
+    }
+  );
+
   context.subscriptions.push(
     helloWorldDisposable,
     openTodaysDailyNoteDisposable,
     setNotebookDisposable,
-    insertTimestampDisposable
+    insertTimestampDisposable,
+    commitDisposable,
+    syncDisposable
   );
 }
 
@@ -97,7 +115,13 @@ async function openTodaysDailyNote() {
   const fileName = `${year}-${month}-${day}.md`;
 
   let notebookDirectory = String(configManager.get("notebookDirectory"));
+  if (!fs.existsSync(notebookDirectory)) {
+    vscode.window.showErrorMessage("Notebook directory is not exists.");
+    return;
+  }
   let filePath = path.join(notebookDirectory, fileName);
+
+  console.log("filePath = ", filePath);
 
   fs.access(filePath, fs.constants.F_OK, (err) => {
     if (err) {
@@ -280,4 +304,21 @@ function init() {
     } else {
     }
   }
+
+  if (configManager.get("enableGit")) {
+    gitService.init();
+    gitService.sync();
+    if (configManager.get("autoCommit")) {
+      gitService.scheduleAutoCommit();
+    }
+  }
+}
+
+async function commit() {
+  gitService.commit();
+}
+
+async function sync() {
+  await gitService.commit();
+  await gitService.sync();
 }
