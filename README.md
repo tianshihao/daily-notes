@@ -24,33 +24,7 @@ Before enable this feature, you need to set the `dailyNotes.enableGit` to `true`
 
 ## Roadmap
 
-### Editing
-
-| Feature                   | Status |
-| ------------------------- | :----: |
-| Create daily note         |   ✅   |
-| Insert date/time          |   ✅   |
-| Templates                 |   🚀   |
-| Chinese word segmentation |   💡   |
-| Insert title              |   💡   |
-| Insert weekday            |   💡   |
-
-### Statistics
-
-| Feature                  | Status |
-| ------------------------ | :----: |
-| Word count on status bar |   💡   |
-| Statistics something...  |   💡   |
-
-### Content Control
-
-| Feature                                   | Status |
-| ----------------------------------------- | :----: |
-| Auto Commit                               |   ✅   |
-| Sync with remote                          |   ✅   |
-| Toggle auto commit                        |   💡   |
-| Force rewrite the remote repository       |   💡   |
-| Archive the notes(merge by year or month) |   💡   |
+The [Roadmap](ROADMAP.md).
 
 ## Requirements
 
