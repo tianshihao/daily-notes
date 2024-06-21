@@ -2,7 +2,7 @@
   "name": "daily-notes",
   "displayName": "Daily Notes",
   "description": "Write daily notes using VS Code.",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "engines": {
     "vscode": "^1.90.0"
   },
@@ -50,6 +50,16 @@
         "command": "daily-notes.insertTimestamp",
         "title": "Insert Timestamp",
         "category": "Daily Notes"
+      },
+      {
+        "command": "daily-notes.commit",
+        "title": "Commit",
+        "category": "Daily Notes"
+      },
+      {
+        "command": "daily-notes.sync",
+        "title": "Sync",
+        "category": "Daily Notes"
       }
     ],
     "configuration": {
@@ -64,6 +74,26 @@
           "type": "string",
           "default": "",
           "description": "The directory where daily notes are stored."
+        },
+        "dailyNotes.enableGit": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether to enable git for daily notes."
+        },
+        "dailyNotes.commitMessage": {
+          "type": "string",
+          "default": "Auto commited by Daily Notes",
+          "description": "The commit message when committing daily notes."
+        },
+        "dailyNotes.autoCommit": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether to automatically commit daily notes."
+        },
+        "dailyNotes.autoCommitInterval": {
+          "type": "number",
+          "default": 10,
+          "description": "The interval in minutes to automatically commit daily notes."
         }
       }
     }
@@ -90,9 +120,13 @@
     "@typescript-eslint/parser": "^7.11.0",
     "@vscode/test-cli": "^0.0.9",
     "@vscode/test-electron": "^2.4.0",
-    "esbuild": "^0.21.4",
     "eslint": "^8.57.0",
     "npm-run-all": "^4.1.5",
+    "simple-git": "^3.2.5",
     "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "@esbuild/win32-x64": "^0.21.5",
+    "esbuild": "^0.21.5"
   }
 }

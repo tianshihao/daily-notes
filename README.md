@@ -6,33 +6,45 @@ This is the README for the "Daily Notes" extension. This extension allows you to
 
 The "Daily Notes" extension provides the following feature:
 
-- **Create Daily Note**: With a single command, you can create a new note for the current day. This note is named with today's date and opened in a new editor tab.
+### Editing
 
-- **Insert Date/Time**: You can insert the current date and time into the note with a single command.
+- **Create Daily Note**: With a single command `daily-notes.openTodaysDailyNote`, you can create a new note for the current day. This note is named with today's date and opened in a new editor tab.
+
+- **Insert Date/Time**: You can insert the current date and time into the note with `daily-notes.insertTimestamp`.
+
+### Content Control
+
+Before enable this feature, you need to set the `dailyNotes.enableGit` to `true`. The extension will detect the git repository in the workspace and use it to commit the changes. Make sure the git repository is initialized and connected to a remote repository.
+
+- **Commit**: You can commit the changes to the git repository with `daily-notes.commit`.
+
+- **Sync with Remote**: You can push the changes to the remote repository with `daily-notes.sync`.
+
+- **Auto Commit**: Set `dailyNotes.autoCommit` to `true`. then the extension will automatically commit the changes every `dailyNotes.autoCommitInterval` mintues to the git repository.
 
 ## Roadmap
 
 ### Editing
 
-| Feature                  | Status |
-| ------------------------ | :----: |
-| Create daily note        |   ✅   |
-| Insert date/time         |   ✅   |
-| Templates                |   💡   |
-| Word count on status bar |   💡   |
+| Feature           | Status |
+| ----------------- | :----: |
+| Create daily note |   ✅   |
+| Insert date/time  |   ✅   |
+| Templates         |   💡   |
 
 ### Statistics
 
-| Feature                 | Status |
-| ----------------------- | :----: |
-| Word cloud              |   💡   |
-| Statistics something... |   💡   |
+| Feature                  | Status |
+| ------------------------ | :----: |
+| Word count on status bar |   💡   |
+| Statistics something...  |   💡   |
 
-### Source Control
+### Content Control
 
-| Feature     | Status |
-| ----------- | :----: |
-| Auto Commit |   💡   |
+| Feature          | Status |
+| ---------------- | :----: |
+| Auto Commit      |   ✅   |
+| Sync with remote |   ✅   |
 
 ## Requirements
 
@@ -59,6 +71,10 @@ Add support for workspace.
 ### 0.0.3
 
 Add support for inserting date/time.
+
+### 0.0.4
+
+Add auto commit feature.
 
 ---
 
