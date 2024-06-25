@@ -30,7 +30,7 @@ Before enable this feature, you need to set the `dailyNotes.enableGit` to `true`
 | ------------------------- | :----: |
 | Create daily note         |   ✅   |
 | Insert date/time          |   ✅   |
-| Templates                 |   💡   |
+| Templates                 |   🚀   |
 | Chinese word segmentation |   💡   |
 | Insert title              |   💡   |
 | Insert weekday            |   💡   |
@@ -81,6 +81,10 @@ Add support for inserting date/time.
 ### 0.0.4
 
 Add auto commit feature.
+
+### 0.0.5
+
+Add title for daily note.
 
 ---
 
