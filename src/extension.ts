@@ -1,6 +1,7 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import { configManager } from "./config_manager/config_manager";
+import { docTemplate } from "./doc_template/doc_template";
 import { gitService } from "./git_service/git_service";
 import * as fs from "fs";
 import * as path from "path";
@@ -125,7 +126,8 @@ async function openTodaysDailyNote() {
 
   fs.access(filePath, fs.constants.F_OK, (err) => {
     if (err) {
-      fs.writeFile(filePath, "", (err) => {
+      const initialContent = docTemplate.generateContent("dailyNote");
+      fs.writeFile(filePath, initialContent, (err) => {
         if (err) {
           vscode.window.showErrorMessage("Failed to create file");
         } else {
