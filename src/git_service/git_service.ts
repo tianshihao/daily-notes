@@ -1,5 +1,5 @@
 import { configManager } from "../config_manager/config_manager";
-import { simpleGit, SimpleGit } from "simple-git";
+import { simpleGit, SimpleGit, StatusResult } from "simple-git";
 import { utils } from "../utils/utils";
 import * as fs from "fs";
 import * as vscode from "vscode";
@@ -49,6 +49,12 @@ class GitService {
     }
   }
 
+  async checkIfWorkingDirectoryIsClean(
+    statusResult: StatusResult
+  ): Promise<boolean> {
+    return statusResult.isClean();
+  }
+
   async commit(): Promise<void> {
     vscode.window.showInformationMessage("Checking for changes to commit...");
 
@@ -73,7 +79,7 @@ class GitService {
         // Check if there are any uncommitted changes
         const status = await this.gitP.status();
 
-        if (status.modified.length > 0 || status.not_added.length > 0) {
+        if ((await this.checkIfWorkingDirectoryIsClean(status)) === false) {
           vscode.window.showInformationMessage("Staging changes...");
 
           // Stage all changes
@@ -140,16 +146,8 @@ class GitService {
         const status = await this.gitP.status();
 
         // Check if there are any uncommitted changes
-        if (
-          status.modified.length > 0 ||
-          status.not_added.length > 0 ||
-          status.created.length > 0 ||
-          status.staged.length > 0
-        ) {
-          // If there are untracked files, add them to Git
-          if (status.not_added.length > 0) {
-            await this.gitP.add(".");
-          }
+        if ((await this.checkIfWorkingDirectoryIsClean(status)) === false) {
+          await this.gitP.add(".");
 
           // Append the timestamp to the stash message
           const stashMessage = `Stashed by Daily Notes at ${utils.getTimestamp()}`;
@@ -174,12 +172,7 @@ class GitService {
         }
 
         // If there were any stashed changes, apply them
-        if (
-          status.modified.length > 0 ||
-          status.not_added.length > 0 ||
-          status.created.length > 0 ||
-          status.staged.length > 0
-        ) {
+        if ((await this.checkIfWorkingDirectoryIsClean(status)) === false) {
           vscode.window.showInformationMessage("Applying stashed changes...");
           await this.gitP.stash(["pop"]);
         }
