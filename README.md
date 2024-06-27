@@ -28,7 +28,14 @@ The [Roadmap](ROADMAP.md).
 
 ## Requirements
 
-There are no specific requirements or dependencies for this extension.
+Install Commitizen globally on your machine using npm. Then you can initialize it in your project to use a cz-emoji-conventional adapter.
+
+```bash
+npm install -g commitizen
+commitizen init cz-emoji-conventional --save-dev --save-exact --force
+```
+
+Now, instead of using `git commit`, you can use `git cz` to commit changes using Commitizen's prompts to generate standardized commit messages. Or you can press `C` instead of `c` if you use lazygit.
 
 ## Extension Settings
 
