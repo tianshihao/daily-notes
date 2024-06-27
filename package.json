@@ -2,7 +2,7 @@
   "name": "daily-notes",
   "displayName": "Daily Notes",
   "description": "Write daily notes using VS Code.",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "engines": {
     "vscode": "^1.90.0"
   },
@@ -187,6 +187,11 @@
           "description": "Reverts a previous commit",
           "title": "Reverts",
           "emoji": "🔙"
+        },
+        "release": {
+          "description": "Create a release commit",
+          "title": "Release",
+          "emoji": "🎉"
         }
       }
     }

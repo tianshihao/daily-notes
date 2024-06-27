@@ -45,30 +45,6 @@ This extension does not contribute any settings through the `contributes.configu
 
 There are no known issues at the moment. If you encounter any problems, please report them in the [issue tracker](https://github.com/your-github-username/daily-notes/issues).
 
-## Release Notes
-
-### 0.0.1
-
-Initial release of the "Daily Notes" extension.
-
-### 0.0.2
-
-Add support for workspace.
-
-### 0.0.3
-
-Add support for inserting date/time.
-
-### 0.0.4
-
-Add auto commit feature.
-
-### 0.0.5
-
-Add title for daily note.
-
----
-
 ## Following extension guidelines
 
 This extension follows the [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines).
