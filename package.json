@@ -120,6 +120,7 @@
     "@typescript-eslint/parser": "^7.11.0",
     "@vscode/test-cli": "^0.0.9",
     "@vscode/test-electron": "^2.4.0",
+    "cz-emoji-conventional": "^1.0.2",
     "eslint": "^8.57.0",
     "npm-run-all": "^4.1.5",
     "simple-git": "^3.2.5",
@@ -127,5 +128,67 @@
   },
   "dependencies": {
     "esbuild": "^0.21.5"
+  },
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cz-emoji-conventional",
+      "types": {
+        "feat": {
+          "description": "A new feature",
+          "title": "Features",
+          "emoji": "✨"
+        },
+        "fix": {
+          "description": "A bug fix",
+          "title": "Bug Fixes",
+          "emoji": "🩹"
+        },
+        "docs": {
+          "description": "Documentation only changes",
+          "title": "Documentation",
+          "emoji": "📝"
+        },
+        "style": {
+          "description": "Changes that do not affect the meaning of the code (white-space, formatting, missing semi-colons, etc)",
+          "title": "Styles",
+          "emoji": "💄"
+        },
+        "refactor": {
+          "description": "A code change that neither fixes a bug nor adds a feature",
+          "title": "Code Refactoring",
+          "emoji": "🎨"
+        },
+        "perf": {
+          "description": "A code change that improves performance",
+          "title": "Performance Improvements",
+          "emoji": "🚀"
+        },
+        "test": {
+          "description": "Adding missing tests or correcting existing tests",
+          "title": "Tests",
+          "emoji": "🧪"
+        },
+        "build": {
+          "description": "Changes that affect the build system or external dependencies (example scopes: gulp, broccoli, npm)",
+          "title": "Builds",
+          "emoji": "🔨"
+        },
+        "ci": {
+          "description": "Changes to our CI configuration files and scripts (example scopes: Travis, Circle, BrowserStack, SauceLabs)",
+          "title": "Continuous Integrations",
+          "emoji": "📦"
+        },
+        "chore": {
+          "description": "Other changes that don't modify src or test files",
+          "title": "Chores",
+          "emoji": "🧹"
+        },
+        "revert": {
+          "description": "Reverts a previous commit",
+          "title": "Reverts",
+          "emoji": "🔙"
+        }
+      }
+    }
   }
 }
