@@ -3,6 +3,8 @@
 import { configManager } from "./config_manager/config_manager";
 import { docTemplate } from "./doc_template/doc_template";
 import { gitService } from "./git_service/git_service";
+import { statusBarWidgetManager } from "./widget/status_bar_widget";
+import { textService } from "./text_service/text_service";
 import * as fs from "fs";
 import * as path from "path";
 import * as vscode from "vscode";
@@ -12,8 +14,7 @@ import * as vscode from "vscode";
 export function activate(context: vscode.ExtensionContext) {
   console.log('Congratulations, your extension "daily-notes" is now active!');
 
-  console.log("extension activated.");
-  init();
+  init(context);
 
   context.subscriptions.push(configManager);
 
@@ -284,7 +285,7 @@ async function openNotebook(notebookInfo: { directory: string; name: string }) {
   }
 }
 
-function init() {
+function init(context: vscode.ExtensionContext) {
   console.log("Initializing daily notes extension.");
 
   if (!vscode.workspace.workspaceFolders) {
@@ -307,6 +308,12 @@ function init() {
     }
   }
 
+  initGitService();
+
+  monitorActiveEditorChanges(context);
+}
+
+function initGitService() {
   if (configManager.get("enableGit")) {
     gitService.init();
     gitService.sync();
@@ -323,4 +330,54 @@ async function commit() {
 async function sync() {
   await gitService.commit();
   await gitService.sync();
+}
+
+// This function is modified to monitor changes in the active editor only
+function monitorActiveEditorChanges(context: vscode.ExtensionContext) {
+  // Immediately perform a word count if there's an active editor when the extension is activated
+  const activeEditor = vscode.window.activeTextEditor;
+  if (activeEditor) {
+    updateTextState(activeEditor);
+  }
+
+  // Monitor changes in the active editor and perform a word count on change
+  vscode.window.onDidChangeActiveTextEditor(
+    (editor) => {
+      if (editor) {
+        updateTextState(editor);
+      }
+    },
+    null,
+    context.subscriptions
+  );
+
+  vscode.workspace.onDidChangeTextDocument(
+    (event) => {
+      if (
+        vscode.window.activeTextEditor &&
+        event.document === vscode.window.activeTextEditor.document
+      ) {
+        updateTextState(vscode.window.activeTextEditor);
+      }
+    },
+    null,
+    context.subscriptions
+  );
+}
+
+function updateTextState(activeEditor: vscode.TextEditor) {
+  statusBarWidgetManager
+    .getWidget("wordCount")
+    .updateContent(
+      `Words: ${textService.countWords(
+        activeEditor.document.getText(),
+        activeEditor.document.fileName
+      )}`
+    );
+
+  statusBarWidgetManager
+    .getWidget("language")
+    .updateContent(
+      `Language: ${textService.getLanguage(activeEditor.document.fileName)}`
+    );
 }
