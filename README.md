@@ -12,6 +12,10 @@ The "Daily Notes" extension provides the following feature:
 
 - **Insert Date/Time**: You can insert the current date and time into the note with `daily-notes.insertTimestamp`.
 
+## Statistics
+
+- **Word Count on Status Bar**: The extension shows the word count of the current note on the status bar.
+
 ### Content Control
 
 Before enable this feature, you need to set the `dailyNotes.enableGit` to `true`. The extension will detect the git repository in the workspace and use it to commit the changes. Make sure the git repository is initialized and connected to a remote repository.

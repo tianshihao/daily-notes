@@ -10,15 +10,15 @@ Go back to [README](README.md).
 | Insert date/time            |   ✅   |
 | Templates                   |   💡   |
 | \*Chinese word segmentation |   💡   |
-| Insert title                |   💡   |
-| Insert weekday              |   💡   |
+| Insert title                |   ✅   |
+| Insert weekday              |   ✅   |
 | Muti-language support       |   💡   |
 
 ## Statistics
 
 | Feature                  | Status |
 | ------------------------ | :----: |
-| Word count on status bar |   💡   |
+| Word count on status bar |   ✅   |
 | Statistics something...  |   💡   |
 
 ## Content Control
