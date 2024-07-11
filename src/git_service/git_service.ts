@@ -96,38 +96,40 @@ class GitService {
         console.error("Error during commit:", err);
       }
     }
+
+    if (true === configManager.get("autoSyncAfterCommit")) {
+      await this.sync();
+    }
   }
 
-  async scheduleAutoCommit() {
+  public scheduleAutoCommit() {
     // min to ms.
     const autoCommitInterval =
       configManager.get("autoCommitInterval") * 60 * 1000;
     const notebookDirectory = configManager.get("notebookDirectory");
 
+    // todo tianshihao, move the check of auto commit interval to the utils.
     if (notebookDirectory && !isNaN(autoCommitInterval)) {
       if (this.autoCommitIntervalId) {
         clearInterval(this.autoCommitIntervalId);
       }
 
       setTimeout(async () => {
-        try {
-          console.log("Auto commit...", utils.getTimestamp());
-          await this.commit();
-          await this.sync();
-        } catch (err) {
-          console.error("Error during auto commit:", err);
-        }
-
         this.autoCommitIntervalId = setInterval(async () => {
           try {
             console.log("Auto commit...", utils.getTimestamp());
             await this.commit();
-            await this.sync();
           } catch (err) {
             console.error("Error during auto commit:", err);
           }
         }, autoCommitInterval);
       }, autoCommitInterval);
+    }
+  }
+
+  public stopAutoCommit() {
+    if (this.autoCommitIntervalId) {
+      clearInterval(this.autoCommitIntervalId);
     }
   }
 

@@ -52,13 +52,33 @@
         "category": "Daily Notes"
       },
       {
+        "command": "daily-notes.toggleEnableGit",
+        "title": "Toggle Enable Git",
+        "category": "Daily Notes"
+      },
+      {
         "command": "daily-notes.commit",
         "title": "Commit",
         "category": "Daily Notes"
       },
       {
+        "command": "daily-notes.toggleAutoCommit",
+        "title": "Toggle Auto Commit",
+        "category": "Daily Notes"
+      },
+      {
+        "command": "daily-notes.resetAutoCommitInterval",
+        "title": "Reset Auto Commit Interval",
+        "category": "Daily Notes"
+      },
+      {
         "command": "daily-notes.sync",
         "title": "Sync",
+        "category": "Daily Notes"
+      },
+      {
+        "command": "daily-notes.toggleAutoSyncAfterCommit",
+        "title": "Toggle Auto Sync after commit",
         "category": "Daily Notes"
       }
     ],
@@ -94,6 +114,11 @@
           "type": "number",
           "default": 10,
           "description": "The interval in minutes to automatically commit daily notes."
+        },
+        "dailyNotes.autoSyncAfterCommit": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether to enable sync for daily notes."
         }
       }
     }
