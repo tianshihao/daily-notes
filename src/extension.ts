@@ -51,10 +51,24 @@ export function activate(context: vscode.ExtensionContext) {
     }
   );
 
+  const toggleEnableGitDisposable = vscode.commands.registerCommand(
+    "daily-notes.toggleEnableGit",
+    async () => {
+      toggleEnableGit();
+    }
+  );
+
   const commitDisposable = vscode.commands.registerCommand(
     "daily-notes.commit",
     () => {
       commit();
+    }
+  );
+
+  const toggleAutoCommitDisposable = vscode.commands.registerCommand(
+    "daily-notes.toggleAutoCommit",
+    async () => {
+      toggleAutoCommit();
     }
   );
 
@@ -70,11 +84,40 @@ export function activate(context: vscode.ExtensionContext) {
     openTodaysDailyNoteDisposable,
     setNotebookDisposable,
     insertTimestampDisposable,
+    toggleEnableGitDisposable,
     commitDisposable,
-    syncDisposable
+    toggleAutoCommitDisposable,
   );
 }
 
+function init(context: vscode.ExtensionContext) {
+  console.log("Initializing daily notes extension.");
+
+  if (!vscode.workspace.workspaceFolders) {
+    // do nothing.
+  } else if (vscode.workspace.workspaceFolders) {
+    // Single-folder workspace.
+    if (vscode.workspace.workspaceFolders.length === 1) {
+      // Both configurations will write to the .vscode/settings.json
+      configManager.update(
+        "notebookDirectory",
+        vscode.workspace.workspaceFolders[0].uri.fsPath
+      );
+
+      configManager.update(
+        "notebookName",
+        vscode.workspace.workspaceFolders[0].name,
+        vscode.ConfigurationTarget.Workspace
+      );
+    } else {
+    }
+  }
+
+  initGitService();
+
+  monitorActiveEditorChanges(context);
+  monitorConfigurationChanges();
+}
 function insertTimestamp() {
   const editor = vscode.window.activeTextEditor;
 
@@ -285,42 +328,43 @@ async function openNotebook(notebookInfo: { directory: string; name: string }) {
   }
 }
 
-function init(context: vscode.ExtensionContext) {
-  console.log("Initializing daily notes extension.");
+function setUpGitService() {
+  gitService.init();
+  // if (configManager.get("autoSync")) {
+  //   gitService.sync();
+  // }
+  configManager.update(
+    "autoCommit",
+    true,
+    vscode.ConfigurationTarget.Workspace
+  );
+  gitService.scheduleAutoCommit();
 
-  if (!vscode.workspace.workspaceFolders) {
-    // do nothing.
-  } else if (vscode.workspace.workspaceFolders) {
-    // Single-folder workspace.
-    if (vscode.workspace.workspaceFolders.length === 1) {
-      // Both configurations will write to the .vscode/settings.json
-      configManager.update(
-        "notebookDirectory",
-        vscode.workspace.workspaceFolders[0].uri.fsPath
-      );
+  statusBarWidgetManager
+    .getWidget("enableGit")
+    .updateContent(`Git: ${configManager.get("enableGit") ? "On" : "Off"}`);
 
-      configManager.update(
-        "notebookName",
-        vscode.workspace.workspaceFolders[0].name,
-        vscode.ConfigurationTarget.Workspace
-      );
-    } else {
-    }
-  }
-
-  initGitService();
-
-  monitorActiveEditorChanges(context);
+  statusBarWidgetManager
+    .getWidget("autoCommit")
+    .updateContent(
+      `Auto Commit: ${configManager.get("autoCommit") ? "On" : "Off"}`
+    );
 }
 
-function initGitService() {
-  if (configManager.get("enableGit")) {
-    gitService.init();
-    gitService.sync();
-    if (configManager.get("autoCommit")) {
-      gitService.scheduleAutoCommit();
-    }
-  }
+function disableGitService() {
+  configManager.update(
+    "autoCommit",
+    false,
+    vscode.ConfigurationTarget.Workspace
+  );
+
+  configManager.update("autoSync", false, vscode.ConfigurationTarget.Workspace);
+
+  // todo tianshihao, how to make the widget auto response to the change of configuration?
+  statusBarWidgetManager.getWidget("enableGit").updateContent("Git: Off");
+  statusBarWidgetManager
+    .getWidget("autoCommit")
+    .updateContent("Auto Commit: Off");
 }
 
 async function commit() {
@@ -380,4 +424,109 @@ function updateTextState(activeEditor: vscode.TextEditor) {
     .updateContent(
       `Language: ${textService.getLanguage(activeEditor.document.fileName)}`
     );
+}
+
+function toggleEnableGit() {
+  configManager.update(
+    "enableGit",
+    !configManager.get("enableGit"),
+    vscode.ConfigurationTarget.Workspace
+  );
+}
+
+  if (true === configManager.get("enableGit")) {
+    configManager.update(
+      "autoCommit",
+      true,
+      vscode.ConfigurationTarget.Workspace
+    );
+
+    configManager.update(
+      "autoSync",
+      false,
+      vscode.ConfigurationTarget.Workspace
+    );
+  } else {
+    configManager.update(
+      "autoCommit",
+      false,
+      vscode.ConfigurationTarget.Workspace
+    );
+
+    configManager.update(
+      "autoSync",
+      false,
+      vscode.ConfigurationTarget.Workspace
+    );
+  }
+}
+
+function toggleAutoCommit() {
+  configManager.update(
+    "autoCommit",
+    !configManager.get("autoCommit"),
+    vscode.ConfigurationTarget.Workspace
+  );
+}
+
+function monitorConfigurationChanges() {
+  vscode.workspace.onDidChangeConfiguration((event) => {
+    if (event.affectsConfiguration("dailyNotes.enableGit")) {
+      if (true === configManager.get("enableGit")) {
+        setUpGitService();
+      } else {
+        disableGitService();
+      }
+
+      if (true === configManager.get("enableGit")) {
+        configManager.update(
+          "autoCommit",
+          true,
+          vscode.ConfigurationTarget.Workspace
+        );
+
+        configManager.update(
+          "autoSync",
+          false,
+          vscode.ConfigurationTarget.Workspace
+        );
+      } else {
+        configManager.update(
+          "autoCommit",
+          false,
+          vscode.ConfigurationTarget.Workspace
+        );
+
+        configManager.update(
+          "autoSync",
+          false,
+          vscode.ConfigurationTarget.Workspace
+        );
+      }
+    }
+
+    if (event.affectsConfiguration("dailyNotes.autoCommit")) {
+      if (true === configManager.get("enableGit")) {
+        if (false === configManager.get("autoCommit")) {
+          gitService.stopAutoCommit();
+        } else {
+          gitService.scheduleAutoCommit();
+        }
+
+        statusBarWidgetManager
+          .getWidget("autoCommit")
+          .updateContent(
+            `Auto Commit: ${configManager.get("autoCommit") ? "On" : "Off"}`
+          );
+      } else {
+        // do nothing
+      }
+    }
+
+    if (event.affectsConfiguration("dailyNotes.autoSyncInterval")) {
+      if (configManager.get("autoCommit")) {
+        gitService.scheduleAutoCommit();
+      }
+    }
+  });
 }
