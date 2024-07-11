@@ -8,6 +8,7 @@ export interface IConfigurationKeyTypeMap {
   commitMessage: string;
   autoCommit: boolean;
   autoCommitInterval: number;
+  autoSyncAfterCommit: boolean;
 }
 
 export type IConfigurationKnownKey = keyof IConfigurationKeyTypeMap;
