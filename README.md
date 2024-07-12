@@ -12,19 +12,20 @@ The "Daily Notes" extension provides the following feature:
 
 - **Insert Date/Time**: You can insert the current date and time into the note with `daily-notes.insertTimestamp`.
 
-## Statistics
+### Statistics
 
 - **Word Count on Status Bar**: The extension shows the word count of the current note on the status bar.
 
 ### Content Control
 
-Before enable this feature, you need to set the `dailyNotes.enableGit` to `true`. The extension will detect the git repository in the workspace and use it to commit the changes. Make sure the git repository is initialized and connected to a remote repository.
+Before enabling this feature, you need to set the `dailyNotes.enableGit` to `true` through `daily-notes.toggleEnableGit`. The extension will detect the git repository in the workspace and use it to commit the changes. Make sure the git repository is initialized and connected to a remote repository.
 
 - **Commit**: You can commit the changes to the git repository with `daily-notes.commit`.
-
 - **Sync with Remote**: You can push the changes to the remote repository with `daily-notes.sync`.
-
-- **Auto Commit**: Set `dailyNotes.autoCommit` to `true`. then the extension will automatically commit the changes every `dailyNotes.autoCommitInterval` mintues to the git repository.
+- **Auto Commit**: Set `dailyNotes.autoCommit` to `true`, then the extension will automatically commit the changes every `dailyNotes.autoCommitInterval` minutes to the git repository.
+- **Toggle Auto Commit**: Command allows the user to enable or disable auto commit functionality.
+- **Reset Auto Commit Interval**: Command resets the interval at which auto commit are made.
+- **Toggle Auto Sync After Commit**: Command enables or disables automatic synchronization with the remote repository after each commit.
 
 ## Roadmap
 

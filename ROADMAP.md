@@ -27,7 +27,7 @@ Go back to [README](README.md).
 | ----------------------------------------- | :----: |
 | Auto Commit                               |   ✅   |
 | Sync with remote                          |   ✅   |
-| Toggle auto commit(pause for a while)     |   💡   |
+| Toggle auto commit(pause for a while)     |   ✅   |
 | Force rewrite the remote repository       |   💡   |
 | Archive the notes(merge by year or month) |   💡   |
 | Connect to new remote repository          |   💡   |
