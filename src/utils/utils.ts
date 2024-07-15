@@ -1,3 +1,5 @@
+import * as vscode from "vscode";
+
 class Utils {
   private static instance: Utils;
 
@@ -73,6 +75,13 @@ class Utils {
     const date = new Date();
     const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     return weekDays[date.getDay()];
+  }
+
+  public isFileInNotebookDirectory(activeEditor: vscode.TextEditor): boolean {
+    const config = vscode.workspace.getConfiguration("dailyNotes");
+    const notebookDirectory = config.get("notebookDirectory") as string;
+    const fileName = activeEditor.document.fileName;
+    return fileName.startsWith(notebookDirectory);
   }
 }
 
