@@ -123,6 +123,14 @@ class StatusBarWidgetManager {
     }
   }
 
+  public showAll(): void {
+    this.widgets.forEach((widget) => widget.show());
+  }
+
+  public hideAll(): void {
+    this.widgets.forEach((widget) => widget.hide());
+  }
+
   /**
    * Disposes all the widgets in the status bar widget.
    */

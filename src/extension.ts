@@ -8,6 +8,7 @@ import { textService } from "./text_service/text_service";
 import * as fs from "fs";
 import * as path from "path";
 import * as vscode from "vscode";
+import { utils } from "./utils/utils";
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -398,39 +399,6 @@ async function sync() {
   await gitService.sync();
 }
 
-// This function is modified to monitor changes in the active editor only
-function monitorActiveEditorChanges(context: vscode.ExtensionContext) {
-  // Immediately perform a word count if there's an active editor when the extension is activated
-  const activeEditor = vscode.window.activeTextEditor;
-  if (activeEditor) {
-    updateTextState(activeEditor);
-  }
-
-  // Monitor changes in the active editor and perform a word count on change
-  vscode.window.onDidChangeActiveTextEditor(
-    (editor) => {
-      if (editor) {
-        updateTextState(editor);
-      }
-    },
-    null,
-    context.subscriptions
-  );
-
-  vscode.workspace.onDidChangeTextDocument(
-    (event) => {
-      if (
-        vscode.window.activeTextEditor &&
-        event.document === vscode.window.activeTextEditor.document
-      ) {
-        updateTextState(vscode.window.activeTextEditor);
-      }
-    },
-    null,
-    context.subscriptions
-  );
-}
-
 function updateTextState(activeEditor: vscode.TextEditor) {
   statusBarWidgetManager
     .getWidget("wordCount")
@@ -501,6 +469,53 @@ function toggleautoSync() {
     "autoSync",
     !configManager.get("autoSync"),
     vscode.ConfigurationTarget.Workspace
+  );
+}
+
+// This function is modified to monitor changes in the active editor only
+function monitorActiveEditorChanges(context: vscode.ExtensionContext) {
+  // Immediately perform a word count if there's an active editor when the extension is activated
+  const activeEditor = vscode.window.activeTextEditor;
+  if (activeEditor) {
+    // 1. Check whether the active editor is under the notebook directory.
+    if (true === utils.isFileInNotebookDirectory(activeEditor)) {
+      // 2. If so update the text state.
+      updateTextState(activeEditor);
+      statusBarWidgetManager.showAll();
+    } else {
+      statusBarWidgetManager.hideAll();
+    }
+  }
+
+  // Monitor changes in the active editor and perform a word count on change
+  vscode.window.onDidChangeActiveTextEditor(
+    (editor) => {
+      if (editor) {
+        // 1. Check whether the active editor is under the notebook directory.
+        if (true === utils.isFileInNotebookDirectory(editor)) {
+          // 2. If so update the text state.
+          updateTextState(editor);
+          statusBarWidgetManager.showAll();
+        } else {
+          statusBarWidgetManager.hideAll();
+        }
+      }
+    },
+    null,
+    context.subscriptions
+  );
+
+  vscode.workspace.onDidChangeTextDocument(
+    (event) => {
+      if (
+        vscode.window.activeTextEditor &&
+        event.document === vscode.window.activeTextEditor.document
+      ) {
+        updateTextState(vscode.window.activeTextEditor);
+      }
+    },
+    null,
+    context.subscriptions
   );
 }
 
