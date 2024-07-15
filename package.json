@@ -77,7 +77,7 @@
         "category": "Daily Notes"
       },
       {
-        "command": "daily-notes.toggleAutoSyncAfterCommit",
+        "command": "daily-notes.toggleautoSync",
         "title": "Toggle Auto Sync after commit",
         "category": "Daily Notes"
       }
@@ -115,7 +115,7 @@
           "default": 10,
           "description": "The interval in minutes to automatically commit daily notes."
         },
-        "dailyNotes.autoSyncAfterCommit": {
+        "dailyNotes.autoSync": {
           "type": "boolean",
           "default": false,
           "description": "Whether to enable sync for daily notes."
