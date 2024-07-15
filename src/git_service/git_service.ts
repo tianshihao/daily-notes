@@ -97,7 +97,7 @@ class GitService {
       }
     }
 
-    if (true === configManager.get("autoSyncAfterCommit")) {
+    if (true === configManager.get("autoSync")) {
       await this.sync();
     }
   }

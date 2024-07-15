@@ -86,10 +86,10 @@ export function activate(context: vscode.ExtensionContext) {
     }
   );
 
-  const toggleAutoSyncAfterCommitDisposable = vscode.commands.registerCommand(
-    "daily-notes.toggleAutoSyncAfterCommit",
+  const toggleautoSyncDisposable = vscode.commands.registerCommand(
+    "daily-notes.toggleautoSync",
     async () => {
-      toggleAutoSyncAfterCommit();
+      toggleautoSync();
     }
   );
 
@@ -103,7 +103,7 @@ export function activate(context: vscode.ExtensionContext) {
     toggleAutoCommitDisposable,
     resetAutoCommitIntervalDisposable,
     syncDisposable,
-    toggleAutoSyncAfterCommitDisposable
+    toggleautoSyncDisposable
   );
 }
 
@@ -351,6 +351,10 @@ function setUpGitService() {
 
   if (true === configManager.get("enableGit")) {
     if (true === configManager.get("autoCommit")) {
+      if (true === configManager.get("autoSync")) {
+        gitService.sync();
+      }
+
       gitService.scheduleAutoCommit();
     }
   }
@@ -373,11 +377,7 @@ function disableGitService() {
     vscode.ConfigurationTarget.Workspace
   );
 
-  configManager.update(
-    "autoSyncAfterCommit",
-    false,
-    vscode.ConfigurationTarget.Workspace
-  );
+  configManager.update("autoSync", false, vscode.ConfigurationTarget.Workspace);
 
   // todo tianshihao, how to make the widget auto response to the change of configuration?
   statusBarWidgetManager.getWidget("enableGit").updateContent("Git: Off");
@@ -388,7 +388,7 @@ function disableGitService() {
 
 async function commit() {
   await gitService.commit();
-  if (true === configManager.get("autoSyncAfterCommit")) {
+  if (true === configManager.get("autoSync")) {
     await gitService.sync();
   }
 }
@@ -496,10 +496,10 @@ async function resetAutoCommitInterval() {
   }
 }
 
-function toggleAutoSyncAfterCommit() {
+function toggleautoSync() {
   configManager.update(
-    "autoSyncAfterCommit",
-    !configManager.get("autoSyncAfterCommit"),
+    "autoSync",
+    !configManager.get("autoSync"),
     vscode.ConfigurationTarget.Workspace
   );
 }
@@ -528,7 +528,7 @@ function monitorConfigurationChanges() {
       }
 
       configManager.update(
-        "autoSyncAfterCommit",
+        "autoSync",
         false,
         vscode.ConfigurationTarget.Workspace
       );
