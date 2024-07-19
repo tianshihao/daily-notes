@@ -78,7 +78,7 @@
       },
       {
         "command": "daily-notes.toggleautoSync",
-        "title": "Toggle Auto Sync after commit",
+        "title": "Toggle Auto Sync",
         "category": "Daily Notes"
       }
     ],
