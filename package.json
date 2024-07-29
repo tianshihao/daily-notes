@@ -90,7 +90,7 @@
           "default": "",
           "description": "The folder where daily notes are stored."
         },
-        "dailyNotes.notebookDirectory": {
+        "dailyNotes.notebookPath": {
           "type": "string",
           "default": "",
           "description": "The directory where daily notes are stored."

@@ -1,4 +1,6 @@
 import * as vscode from "vscode";
+import path from "path";
+import fs from "fs";
 
 class Utils {
   private static instance: Utils;
@@ -77,11 +79,72 @@ class Utils {
     return weekDays[date.getDay()];
   }
 
-  public isFileInNotebookDirectory(activeEditor: vscode.TextEditor): boolean {
+  /**
+   * Checks if the file associated with the active editor is within the notebook path.
+   * @param activeEditor - The active text editor.
+   * @returns A boolean indicating whether the file is within the notebook path.
+   */
+  public isFileInNotebookPath(activeEditor: vscode.TextEditor): boolean {
     const config = vscode.workspace.getConfiguration("dailyNotes");
-    const notebookDirectory = config.get("notebookDirectory") as string;
+    const notebookPath = config.get("notebookPath") as string;
     const fileName = activeEditor.document.fileName;
-    return fileName.startsWith(notebookDirectory);
+    return fileName.startsWith(notebookPath);
+  }
+
+  /**
+   * Checks if a value is non-default and not empty.
+   * @param value - The value to check.
+   * @param defaultValue - The default value to compare against.
+   * @returns A boolean indicating whether the value is non-default and not empty.
+   */
+  public isNonDefaultAndNotEmpty(value: string, defaultValue: string): boolean {
+    return value !== defaultValue && value.trim() !== "";
+  }
+
+  /**
+   * Checks if a given file path is valid.
+   * @param filePath - The file path to check.
+   * @returns A boolean indicating whether the path is valid or not.
+   */
+  public isValidPath(filePath: string): boolean {
+    try {
+      // Normalize the path to resolve '..' and '.' segments
+      const normalizedPath = path.resolve(filePath);
+      // Check if the path exists
+      const exists = fs.existsSync(normalizedPath);
+      // A valid path is one that exists.
+      return exists;
+    } catch (error) {
+      // If any error occurs (e.g., insufficient permissions), consider the path invalid
+      return false;
+    }
+  }
+
+  /**
+   * Checks if a given file path is present in the workspace folders.
+   * @param filePath - The file path to check.
+   * @returns A boolean indicating whether the file path is present in the workspace folders.
+   */
+  public isPathPresent(filePath: string): boolean {
+    const isNotebookPathPresent = vscode.workspace.workspaceFolders?.some(
+      (folder) => folder.uri.fsPath === filePath
+    );
+
+    return isNotebookPathPresent as boolean;
+  }
+
+  /**
+   * Checks if the provided notebook path is valid.
+   *
+   * @param path - The notebook path to validate.
+   * @returns `true` if the path is valid, `false` otherwise.
+   */
+  public isValidNotebookPath(path: string): boolean {
+    return (
+      this.isNonDefaultAndNotEmpty(path, "") &&
+      this.isValidPath(path) &&
+      this.isPathPresent(path)
+    );
   }
 }
 

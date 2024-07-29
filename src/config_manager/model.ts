@@ -2,7 +2,7 @@
  * Represents a map of configuration key types.
  */
 export interface IConfigurationKeyTypeMap {
-  notebookDirectory: string;
+  notebookPath: string;
   notebookName: string;
   enableGit: boolean;
   commitMessage: string;
