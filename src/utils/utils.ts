@@ -125,7 +125,7 @@ class Utils {
    * @param filePath - The file path to check.
    * @returns A boolean indicating whether the file path is present in the workspace folders.
    */
-  public isPathPresent(filePath: string): boolean {
+  public isPathPresentInWorkspace(filePath: string): boolean {
     const isNotebookPathPresent = vscode.workspace.workspaceFolders?.some(
       (folder) => folder.uri.fsPath === filePath
     );
@@ -143,7 +143,7 @@ class Utils {
     return (
       this.isNonDefaultAndNotEmpty(path, "") &&
       this.isValidPath(path) &&
-      this.isPathPresent(path)
+      this.isPathPresentInWorkspace(path)
     );
   }
 }

@@ -39,6 +39,7 @@ export function activate(context: vscode.ExtensionContext) {
     }
   );
 
+  // todo tianshihao, remove next time.
   const setNotebookDisposable = vscode.commands.registerCommand(
     "daily-notes.setupNotebook",
     () => {
@@ -109,12 +110,14 @@ export function activate(context: vscode.ExtensionContext) {
   );
 }
 
+// After openTodoysDailyNote, the setUp will work properly in the next time.
 function setUp(context: vscode.ExtensionContext) {
   console.log("Initializing daily notes extension.");
 
   // 1. Init context first.
   resetContext();
 
+  // 2. Establish the listeners.
   if (false === Context.getInstance().getIsConfigurationChangeListenerSet()) {
     monitorConfigurationChanges(context);
     Context.getInstance().setIsConfigurationChangeListenerSet(true);
@@ -124,19 +127,32 @@ function setUp(context: vscode.ExtensionContext) {
     Context.getInstance().setIsWorkspaceFolderChangeListenerSet(true);
   }
 
+  // 3. Check the extension state and activate or deactivate the extension features.
   if (ExtensionState.Ready === Context.getInstance().getExtensionState()) {
     activateExtensionFeatures(context);
+  } else {
+    deactivateExtensionFeatures(context);
   }
 }
 
 function activateExtensionFeatures(context: vscode.ExtensionContext) {
-  checkWorkspace();
+  // checkWorkspace();
 
   activateGitService();
 
+  // todo tianshihao, refactor to be toggleable or the manager of listener.
   monitorActiveEditorChanges(context);
 
   Context.getInstance().setExtensionState(ExtensionState.Running);
+}
+
+function deactivateExtensionFeatures(context: vscode.ExtensionContext) {
+  disableGitService();
+
+  // todo tianshihao, disable the word count of text service.
+
+  // todo tianshihao, should the toggling the visibility of widgets in a single location?
+  statusBarWidgetManager.hideAll();
 }
 
 function resetContext() {
@@ -160,7 +176,10 @@ function checkWorkspace() {
     context.setExtensionState(ExtensionState.Waiting);
   } else if (workspaceFolders) {
     if (true === context.getIsNotebookConfigured()) {
-      if (false === utils.isPathPresent(configManager.get("notebookPath"))) {
+      if (
+        false ===
+        utils.isPathPresentInWorkspace(configManager.get("notebookPath"))
+      ) {
         // The notebook path is not present in the workspace.
         context.setExtensionState(ExtensionState.Waiting);
       }
@@ -171,15 +190,15 @@ function checkWorkspace() {
   }
 }
 
-function deactivateExtension() {
-  console.log(
-    "Deactivating extension as no notebook directory is present in the workspace."
-  );
-  vscode.commands.executeCommand(
-    "workbench.action.unloadExtension",
-    "daily-notes"
-  );
-}
+// function deactivateExtension() {
+//   console.log(
+//     "Deactivating extension as no notebook directory is present in the workspace."
+//   );
+//   vscode.commands.executeCommand(
+//     "workbench.action.unloadExtension",
+//     "daily-notes"
+//   );
+// }
 
 function insertTimestamp() {
   const editor = vscode.window.activeTextEditor;
@@ -567,6 +586,37 @@ function monitorActiveEditorChanges(context: vscode.ExtensionContext) {
   );
 }
 
+// function handleActiveEditorChange(editor: vscode.TextEditor | undefined) {
+//   if (editor) {
+//     console.log(`Active editor changed: ${editor.document.uri.fsPath}`);
+//     // Add your logic here
+//   }
+// }
+
+// function toggleActiveEditorChangeListener() {
+//   if (Context.getInstance().getIsActiveEditorChangeListenerEnabled()) {
+//     // Unregister the listener
+//     if (Context.getInstance().getActiveEditorChangeListener()) {
+//       Context.getInstance().getActiveEditorChangeListener()?.dispose();
+//       Context.getInstance().setActiveEditorChangeListener(undefined);
+//     }
+//     vscode.window.showInformationMessage(
+//       "Active editor change listener disabled."
+//     );
+//   } else {
+//     // Register the listener
+//     Context.getInstance().setActiveEditorChangeListener(
+//       vscode.window.onDidChangeActiveTextEditor(handleActiveEditorChange)
+//     );
+//     vscode.window.showInformationMessage(
+//       "Active editor change listener enabled."
+//     );
+//   }
+//   Context.getInstance().setIsActiveEditorChangeListenerEnabled(
+//     !Context.getInstance().getIsActiveEditorChangeListenerEnabled()
+//   );
+// }
+
 // This function also repsonds to changes of workspace folders.
 function monitorConfigurationChanges(context: vscode.ExtensionContext) {
   vscode.workspace.onDidChangeConfiguration((event) => {
@@ -629,6 +679,16 @@ function monitorConfigurationChanges(context: vscode.ExtensionContext) {
           if (true === configManager.get("autoCommit")) {
             gitService.scheduleAutoCommit();
           }
+        }
+      }
+
+      if (event.affectsConfiguration("dailyNotes.autoSync")) {
+        if (true === configManager.get("enableGit")) {
+          statusBarWidgetManager
+            .getWidget("autoSync")
+            .updateContent(
+              `Auto Sync: ${configManager.get("autoSync") ? "On" : "Off"}`
+            );
         }
       }
     }
