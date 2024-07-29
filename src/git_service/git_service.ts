@@ -11,10 +11,10 @@ class GitService {
   private autoCommitIntervalId?: NodeJS.Timeout = undefined;
 
   private constructor() {
-    const notebookDirectory = configManager.get("notebookDirectory");
+    const notebookPath = configManager.get("notebookPath");
 
-    if (notebookDirectory) {
-      this.gitP = simpleGit(notebookDirectory);
+    if (notebookPath) {
+      this.gitP = simpleGit(notebookPath);
     } else {
       this.gitP = undefined;
     }
@@ -67,11 +67,11 @@ class GitService {
 
     if (this.gitP) {
       try {
-        const notebookDirectory = configManager.get("notebookDirectory");
+        const notebookPath = configManager.get("notebookPath");
 
         // todo tianshihao, will this include files in subdirectories?
         for (const doc of vscode.workspace.textDocuments) {
-          if (doc.fileName.startsWith(notebookDirectory) && doc.isDirty) {
+          if (doc.fileName.startsWith(notebookPath) && doc.isDirty) {
             await doc.save();
           }
         }
@@ -106,10 +106,10 @@ class GitService {
     // min to ms.
     const autoCommitInterval =
       configManager.get("autoCommitInterval") * 60 * 1000;
-    const notebookDirectory = configManager.get("notebookDirectory");
+    const notebookPath = configManager.get("notebookPath");
 
     // todo tianshihao, move the check of auto commit interval to the utils.
-    if (notebookDirectory && !isNaN(autoCommitInterval)) {
+    if (notebookPath && !isNaN(autoCommitInterval)) {
       if (this.autoCommitIntervalId) {
         clearInterval(this.autoCommitIntervalId);
       }

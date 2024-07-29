@@ -5,6 +5,7 @@ import { docTemplate } from "./doc_template/doc_template";
 import { gitService } from "./git_service/git_service";
 import { statusBarWidgetManager } from "./widget/status_bar_widget";
 import { textService } from "./text_service/text_service";
+import { utils } from "./utils/utils";
 import * as fs from "fs";
 import * as path from "path";
 import * as vscode from "vscode";
@@ -131,7 +132,25 @@ function setUp(context: vscode.ExtensionContext) {
     }
   }
 
-  setUpGitService();
+function checkWorkspace() {
+  const workspaceFolders = vscode.workspace.workspaceFolders;
+  const context = Context.getInstance();
+
+  // A new empty window. The extension should do nothing for now.
+  if (!workspaceFolders) {
+    context.setExtensionState(ExtensionState.Waiting);
+  } else if (workspaceFolders) {
+    if (true === context.getIsNotebookConfigured()) {
+      if (false === utils.isPathPresent(configManager.get("notebookPath"))) {
+        // The notebook path is not present in the workspace.
+        context.setExtensionState(ExtensionState.Waiting);
+      }
+    } else {
+      // If the workspace is not configured, the extension also does nothing.
+      context.setExtensionState(ExtensionState.Waiting);
+    }
+  }
+}
 
   monitorActiveEditorChanges(context);
   monitorConfigurationChanges();
@@ -164,8 +183,8 @@ export function deactivate() {}
 
 async function openTodaysDailyNote() {
   if (
-    configManager.get("notebookDirectory") === undefined ||
-    configManager.get("notebookDirectory") === ""
+    configManager.get("notebookPath") === undefined ||
+    configManager.get("notebookPath") === ""
   ) {
     console.log("Notebook directory is not set.");
     await setupNotebook();
@@ -178,12 +197,12 @@ async function openTodaysDailyNote() {
 
   const fileName = `${year}-${month}-${day}.md`;
 
-  let notebookDirectory = String(configManager.get("notebookDirectory"));
-  if (!fs.existsSync(notebookDirectory)) {
+  let notebookPath = String(configManager.get("notebookPath"));
+  if (!fs.existsSync(notebookPath)) {
     vscode.window.showErrorMessage("Notebook directory is not exists.");
     return;
   }
-  let filePath = path.join(notebookDirectory, fileName);
+  let filePath = path.join(notebookPath, fileName);
 
   console.log("filePath = ", filePath);
 
@@ -211,7 +230,7 @@ async function setupNotebook() {
   console.log("Setting up notebook directory.");
   let notebookInfo = { directory: "", name: "" };
 
-  const isSetupSuccessful = await setupNotebookDirectory(notebookInfo);
+  const isSetupSuccessful = await setUpNotebookPath(notebookInfo);
 
   if (!isSetupSuccessful) {
     vscode.window.showErrorMessage("Failed to setup notebook directory.");
@@ -221,7 +240,7 @@ async function setupNotebook() {
   await openNotebook(notebookInfo);
 }
 
-async function setupNotebookDirectory(notebookInfo: {
+async function setUpNotebookPath(notebookInfo: {
   directory: string;
   name: string;
 }) {
@@ -256,19 +275,19 @@ async function setupNotebookDirectory(notebookInfo: {
           const directorySelected = await selectDirectory();
 
           if (directorySelected) {
-            const notebookDirectoryLocal = path.join(
+            const notebookPathLocal = path.join(
               directorySelected,
               notebookNameLocal
             );
 
             try {
               // Create a directory called notebookNameLocal
-              fs.mkdirSync(notebookDirectoryLocal);
+              fs.mkdirSync(notebookPathLocal);
               vscode.window.showInformationMessage(
                 "Directory created successfully."
               );
 
-              notebookInfo.directory = notebookDirectoryLocal;
+              notebookInfo.directory = notebookPathLocal;
               notebookInfo.name = notebookNameLocal;
 
               return true;
@@ -321,11 +340,11 @@ async function openNotebook(notebookInfo: { directory: string; name: string }) {
     console.log("Open notebook with a workspace.");
 
     // Check if notebook directory is opened in the current workspace.
-    const isNotebookDirectoryOpened = vscode.workspace.workspaceFolders.some(
+    const isnotebookPathOpened = vscode.workspace.workspaceFolders.some(
       (folder) => folder.uri.fsPath === notebookInfo.directory
     );
 
-    if (!isNotebookDirectoryOpened) {
+    if (!isnotebookPathOpened) {
       vscode.commands.executeCommand(
         "vscode.openFolder",
         vscode.Uri.file(notebookInfo.directory),
@@ -334,7 +353,7 @@ async function openNotebook(notebookInfo: { directory: string; name: string }) {
     } else {
       // The notebook directory is already opened in the workspace.
       await configManager.update(
-        "notebookDirectory",
+        "notebookPath",
         notebookInfo.directory,
         vscode.ConfigurationTarget.Workspace
       );
@@ -478,7 +497,7 @@ function monitorActiveEditorChanges(context: vscode.ExtensionContext) {
   const activeEditor = vscode.window.activeTextEditor;
   if (activeEditor) {
     // 1. Check whether the active editor is under the notebook directory.
-    if (true === utils.isFileInNotebookDirectory(activeEditor)) {
+    if (true === utils.isFileInNotebookPath(activeEditor)) {
       // 2. If so update the text state.
       updateTextState(activeEditor);
       statusBarWidgetManager.showAll();
@@ -492,7 +511,7 @@ function monitorActiveEditorChanges(context: vscode.ExtensionContext) {
     (editor) => {
       if (editor) {
         // 1. Check whether the active editor is under the notebook directory.
-        if (true === utils.isFileInNotebookDirectory(editor)) {
+        if (true === utils.isFileInNotebookPath(editor)) {
           // 2. If so update the text state.
           updateTextState(editor);
           statusBarWidgetManager.showAll();
