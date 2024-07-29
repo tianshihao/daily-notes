@@ -1,8 +1,10 @@
+import * as vscode from "vscode";
+
 export enum ExtensionState {
   New = "new",
   Running = "running",
-  Ready = "ready",
-  Waiting = "waiting",
+  Ready = "ready to be set up",
+  Waiting = "waiting to be ready",
   Terminated = "terminated",
 }
 
@@ -12,6 +14,9 @@ class Context {
   private isNotebookConfigured: boolean;
   private isConfigurationChangeListenerSet: boolean;
   private isWorkspaceFolderChangeListenerSet: boolean;
+
+  private isActiveEditorChangeListenerEnabled = false;
+  private activeEditorChangeListener: vscode.Disposable | undefined;
 
   private constructor() {
     this.extensionState = ExtensionState.New; // Default state
@@ -62,6 +67,25 @@ class Context {
   ): void {
     this.isWorkspaceFolderChangeListenerSet =
       isWorkspaceFolderChangeListenerSet;
+  }
+
+  public getIsActiveEditorChangeListenerEnabled(): boolean {
+    return this.isActiveEditorChangeListenerEnabled;
+  }
+  public setIsActiveEditorChangeListenerEnabled(
+    isActiveEditorChangeListenerEnabled: boolean
+  ): void {
+    this.isActiveEditorChangeListenerEnabled =
+      isActiveEditorChangeListenerEnabled;
+  }
+
+  public getActiveEditorChangeListener(): vscode.Disposable | undefined {
+    return this.activeEditorChangeListener;
+  }
+  public setActiveEditorChangeListener(
+    activeEditorChangeListener: vscode.Disposable | undefined
+  ): void {
+    this.activeEditorChangeListener = activeEditorChangeListener;
   }
 }
 
