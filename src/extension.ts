@@ -598,7 +598,7 @@ async function resetAutoCommitInterval() {
       validateInput: (text) => {
         const value = parseInt(text, 10);
         if (false === utils.isValidAutoCommitInterval(value)) {
-          return "Please enter a value between 2 and 600.";
+          return "please enter a value between 2 and 600.";
         }
         return null;
       },
