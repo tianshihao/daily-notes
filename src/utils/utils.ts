@@ -146,6 +146,14 @@ class Utils {
       this.isPathPresentInWorkspace(path)
     );
   }
+
+  public isValidAutoCommitInterval(interval: number): boolean {
+    if (isNaN(interval) || interval < 2 || interval > 600) {
+      return false;
+    } else {
+      return true;
+    }
+  }
 }
 
 export const utils = Utils.getInstance();
