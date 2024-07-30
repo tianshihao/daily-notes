@@ -43,9 +43,9 @@ export function activate(context: vscode.ExtensionContext) {
 
   // todo tianshihao, remove next time.
   const setNotebookDisposable = vscode.commands.registerCommand(
-    "daily-notes.setupNotebook",
+    "daily-notes.setUpNotebook",
     () => {
-      setupNotebook();
+      setUpNotebook();
     }
   );
 
