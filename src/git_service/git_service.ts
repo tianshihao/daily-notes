@@ -1,4 +1,5 @@
 import { configManager } from "../config_manager/config_manager";
+import { Logger } from "../utils/logger";
 import { simpleGit, SimpleGit, StatusResult } from "simple-git";
 import { utils } from "../utils/utils";
 import * as fs from "fs";
@@ -36,15 +37,14 @@ class GitService {
         const gitDirectory = await this.gitP.revparse(["--show-toplevel"]);
 
         if (fs.existsSync(path.join(gitDirectory, ".git"))) {
-          vscode.window.showInformationMessage(
-            "Git repository already exists."
-          );
+          Logger.warn("Git repository already exists.");
         } else {
           await this.gitP.init();
-          vscode.window.showInformationMessage("Git repository initialized.");
+          Logger.info("Git repository initialized.");
         }
       } catch (err) {
         vscode.window.showErrorMessage("Failed to initialize git repository.");
+        Logger.error("Error during git initialization: " + err);
       }
     }
   }
@@ -56,7 +56,7 @@ class GitService {
   }
 
   async commit(): Promise<void> {
-    vscode.window.showInformationMessage("Checking for changes to commit...");
+    Logger.info("Checking for changes to commit...");
 
     // Get commit message from configManager
     const commitMessage =
@@ -80,7 +80,7 @@ class GitService {
         const status = await this.gitP.status();
 
         if ((await this.checkIfWorkingDirectoryIsClean(status)) === false) {
-          vscode.window.showInformationMessage("Staging changes...");
+          Logger.info("Staging changes...");
 
           // Stage all changes
           await this.gitP.add(".");
@@ -88,12 +88,13 @@ class GitService {
           // Commit the staged changes
           await this.gitP.commit(commitMessageWithDate);
 
-          vscode.window.showInformationMessage("Changes committed.");
+          Logger.info("Changes committed.");
         } else {
-          vscode.window.showInformationMessage("No changes to commit.");
+          Logger.info("No changes to commit.");
         }
       } catch (err) {
-        console.error("Error during commit:", err);
+        vscode.window.showErrorMessage("Failed to commit changes: " + err);
+        Logger.error("Error during commit: " + err);
       }
     }
 
@@ -135,12 +136,13 @@ class GitService {
 
   // todo tianshihao, the sync takes too long, could be optimized.
   async sync(): Promise<void> {
-    vscode.window.showInformationMessage("Syncing changes...");
+    Logger.info("Syncing changes...");
 
     if (this.gitP) {
       const remotes = await this.gitP.getRemotes(false);
       if (remotes.length === 0) {
         vscode.window.showErrorMessage("No remote repository found.");
+        Logger.error("No remote repository found.");
       }
 
       try {
@@ -166,7 +168,7 @@ class GitService {
 
         if (local !== remoteHead) {
           // Pull the changes from the 'master' branch of the 'origin' remote repository
-          vscode.window.showInformationMessage("Pulling changes...");
+          Logger.info("Pulling changes...");
           await this.gitP.pull(
             "origin",
             "master" /* , { "--rebase": "true" } */
@@ -175,7 +177,7 @@ class GitService {
 
         // If there were any stashed changes, apply them
         if ((await this.checkIfWorkingDirectoryIsClean(status)) === false) {
-          vscode.window.showInformationMessage("Applying stashed changes...");
+          Logger.info("Applying stashed changes...");
           await this.gitP.stash(["pop"]);
         }
 
@@ -185,14 +187,14 @@ class GitService {
         // Check if there are any new commits that need to be pushed
         if (statusAfterPull.ahead > 0) {
           // Push the local changes to the 'master' branch of the 'origin' remote repository
-          vscode.window.showInformationMessage("Pushing changes...");
+          Logger.info("Pushing changes...");
           await this.gitP.push("origin", "master");
         }
 
         vscode.window.showInformationMessage("Changes synced successfully.");
       } catch (err) {
-        vscode.window.showErrorMessage("Failed to sync changes.");
-        console.error("Error during sync:", err);
+        vscode.window.showErrorMessage("Failed to sync changes: " + err);
+        Logger.error("Error during sync: " + err);
       }
     }
   }

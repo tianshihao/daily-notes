@@ -3,6 +3,7 @@
 import { configManager } from "./config_manager/config_manager";
 import { docTemplate } from "./doc_template/doc_template";
 import { gitService } from "./git_service/git_service";
+import { Logger } from "./utils/logger";
 import { statusBarWidgetManager } from "./widget/status_bar_widget";
 import { textService } from "./text_service/text_service";
 import { utils } from "./utils/utils";
@@ -14,7 +15,8 @@ import Context, { ExtensionState } from "./context/context";
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
-  console.log('Congratulations, your extension "daily-notes" is now active!');
+  Logger.init();
+  Logger.info("Congratulations, your extension 'daily-notes' is now active!");
 
   setUp(context);
 
@@ -112,7 +114,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 // After openTodoysDailyNote, the setUp will work properly in the next time.
 function setUp(context: vscode.ExtensionContext) {
-  console.log("Initializing daily notes extension.");
+  Logger.info("Initializing daily notes extension.");
 
   // 1. Init context first.
   resetContext();
@@ -227,11 +229,14 @@ export function deactivate() {}
 
 // The entry of the extension.
 async function openTodaysDailyNote() {
+  Logger.info("openTodaysDailyNote");
+
   if (utils.isValidNotebookPath(configManager.get("notebookPath")) === false) {
-    console.log("Notebook directory is not set.");
+    Logger.warn("Notebook directory is not set.");
     // todo tianshihao, should it return by a boolean value?
-    if (false === (await setupNotebook())) {
-      vscode.window.showErrorMessage("Failed to setup notebook directory.");
+    if (false === (await setUpNotebook())) {
+      Logger.error("Failed to set up notebook directory.");
+      vscode.window.showErrorMessage("Failed to set up notebook directory.");
       return;
     }
   }
@@ -245,18 +250,20 @@ async function openTodaysDailyNote() {
 
   let notebookPath = String(configManager.get("notebookPath"));
   if (!fs.existsSync(notebookPath)) {
+    Logger.error("Notebook directory is not exists.");
     vscode.window.showErrorMessage("Notebook directory is not exists.");
     return;
   }
   let filePath = path.join(notebookPath, fileName);
 
-  console.log("filePath = ", filePath);
+  Logger.info(`Opening today's daily note: ${filePath}`);
 
   fs.access(filePath, fs.constants.F_OK, (err) => {
     if (err) {
       const initialContent = docTemplate.generateContent("dailyNote");
       fs.writeFile(filePath, initialContent, (err) => {
         if (err) {
+          Logger.error("Failed to create file");
           vscode.window.showErrorMessage("Failed to create file");
         } else {
           vscode.workspace.openTextDocument(filePath).then((doc) => {
@@ -272,19 +279,21 @@ async function openTodaysDailyNote() {
   });
 }
 
-async function setupNotebook(): Promise<boolean> {
-  console.log("Setting up notebook directory.");
+async function setUpNotebook(): Promise<boolean> {
+  Logger.info("setUpNotebook");
 
   let notebookInfo = { path: "", name: "" };
 
   let ret = await setNotebookPath(notebookInfo);
   if (false === ret) {
+    Logger.error("Failed to setup notebook path.");
     vscode.window.showErrorMessage("Failed to setup notebook path.");
     return false;
   }
 
   ret = await openNotebook(notebookInfo);
   if (false === ret) {
+    Logger.error("Failed to open notebook path.");
     vscode.window.showErrorMessage("Failed to open notebook path.");
   }
 
@@ -292,6 +301,8 @@ async function setupNotebook(): Promise<boolean> {
 }
 
 async function setNotebookPath(notebookInfo: { path: string; name: string }) {
+  Logger.info("setNotebookPath");
+
   enum Action {
     Create = "Create",
     Update = "Update",
@@ -365,6 +376,8 @@ async function setNotebookPath(notebookInfo: { path: string; name: string }) {
 }
 
 async function selectDirectory() {
+  Logger.info("selectDirectory");
+
   const directory = await vscode.window.showOpenDialog({
     canSelectFolders: true,
     canSelectMany: false,
@@ -377,6 +390,8 @@ async function openNotebook(notebookInfo: {
   path: string;
   name: string;
 }): Promise<boolean> {
+  Logger.info("openNotebook");
+
   enum Action {
     Current = "Current",
     New = "New",
@@ -415,8 +430,10 @@ async function openNotebookInCurrentWindow(notebookInfo: {
   path: string;
   name: string;
 }): Promise<boolean> {
+  Logger.info("openNotebookInCurrentWindow");
+
   if (!vscode.workspace.workspaceFolders) {
-    console.log("Open notebook with an empty window.");
+    Logger.warn("Open notebook within current empty window.");
 
     // Open the notebook folder in the current window as single-folder workspace.
     vscode.commands.executeCommand(
@@ -426,7 +443,7 @@ async function openNotebookInCurrentWindow(notebookInfo: {
       false
     );
   } else if (vscode.workspace.workspaceFolders) {
-    console.log("Open notebook with a workspace.");
+    Logger.info("Open notebook within current workspace.");
 
     // Add the notebookPath to the workspace.
     vscode.workspace.updateWorkspaceFolders(
@@ -455,6 +472,8 @@ async function openNotebookInNewWindow(notebookInfo: {
   path: string;
   name: string;
 }): Promise<boolean> {
+  Logger.info("openNotebookInNewWindow");
+
   vscode.commands.executeCommand(
     "vscode.openFolder",
     vscode.Uri.file(notebookInfo.path),
@@ -465,6 +484,8 @@ async function openNotebookInNewWindow(notebookInfo: {
 }
 
 function activateGitService() {
+  Logger.info("activateGitService");
+
   gitService.init();
 
   if (true === configManager.get("enableGit")) {
@@ -493,6 +514,8 @@ function activateGitService() {
 }
 
 function disableGitService() {
+  Logger.info("disableGitService");
+
   configManager.update(
     "autoCommit",
     false,
@@ -509,6 +532,8 @@ function disableGitService() {
 }
 
 async function commit() {
+  Logger.info("commit");
+
   await gitService.commit();
   if (true === configManager.get("autoSync")) {
     await gitService.sync();
@@ -516,11 +541,15 @@ async function commit() {
 }
 
 async function sync() {
+  Logger.info("sync");
+
   await gitService.commit();
   await gitService.sync();
 }
 
 function updateTextState(activeEditor: vscode.TextEditor) {
+  Logger.info("updateTextState");
+
   statusBarWidgetManager
     .getWidget("wordCount")
     .updateContent(
@@ -538,6 +567,8 @@ function updateTextState(activeEditor: vscode.TextEditor) {
 }
 
 function toggleEnableGit() {
+  Logger.info("toggleEnableGit");
+
   configManager.update(
     "enableGit",
     !configManager.get("enableGit"),
@@ -546,6 +577,8 @@ function toggleEnableGit() {
 }
 
 function toggleAutoCommit() {
+  Logger.info("toggleAutoCommit");
+
   configManager.update(
     "autoCommit",
     !configManager.get("autoCommit"),
@@ -554,6 +587,8 @@ function toggleAutoCommit() {
 }
 
 async function resetAutoCommitInterval() {
+  Logger.info("resetAutoCommitInterval");
+
   let isValid = false;
   let interval;
 
@@ -562,7 +597,7 @@ async function resetAutoCommitInterval() {
       prompt: "Enter the new interval for auto commit in minutes",
       validateInput: (text) => {
         const value = parseInt(text, 10);
-        if (isNaN(value) || value < 2 || value > 600) {
+        if (false === utils.isValidAutoCommitInterval(value)) {
           return "Please enter a value between 2 and 600.";
         }
         return null;
@@ -586,6 +621,8 @@ async function resetAutoCommitInterval() {
 }
 
 function toggleautoSync() {
+  Logger.info("toggleautoSync");
+
   configManager.update(
     "autoSync",
     !configManager.get("autoSync"),
@@ -595,6 +632,8 @@ function toggleautoSync() {
 
 // This function is modified to monitor changes in the active editor only
 function monitorActiveEditorChanges(context: vscode.ExtensionContext) {
+  Logger.info("monitorActiveEditorChanges");
+
   // Immediately perform a word count if there's an active editor when the extension is activated
   const activeEditor = vscode.window.activeTextEditor;
   if (activeEditor) {
@@ -673,10 +712,12 @@ function monitorActiveEditorChanges(context: vscode.ExtensionContext) {
 
 // This function also repsonds to changes of workspace folders.
 function monitorConfigurationChanges(context: vscode.ExtensionContext) {
+  Logger.info("monitorConfigurationChanges");
+
   vscode.workspace.onDidChangeConfiguration((event) => {
     // Will respond to changes in the dailyNotes configuration, even if the dailyNotes.fuck!
     if (event.affectsConfiguration("dailyNotes")) {
-      console.log("dailyNotes configuration changed.");
+      Logger.info("dailyNotes configuration changed.");
 
       if (event.affectsConfiguration("dailyNotes.notebookPath")) {
         setUp(context);
@@ -751,6 +792,8 @@ function monitorConfigurationChanges(context: vscode.ExtensionContext) {
 
 // This function only responds to changes in workspace folders.
 function monitorWorkspaceChanges(context: vscode.ExtensionContext) {
+  Logger.info("monitorWorkspaceChanges");
+
   vscode.workspace.onDidChangeWorkspaceFolders((event) => {
     setUp(context);
   });
