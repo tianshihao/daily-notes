@@ -34,18 +34,17 @@ class Utils {
   }
 
   /**
-   * Returns the current date in the format "YYYY-MM-DD".
-   * @returns {string} The current date.
+   * Returns the current date in the specified format.
+   * @param {string} separator - The separator to use between year, month, and day.
+   * @returns {string} The current date in the format "YYYY{separator}MM{separator}DD".
    */
-  getDate(): string {
+  getDate(separator: string = "-"): string {
     const date = new Date();
-    const timestamp = date.toLocaleString("zh-CN", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    });
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
 
-    return timestamp;
+    return `${year}${separator}${month}${separator}${day}`;
   }
 
   /**

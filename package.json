@@ -42,6 +42,11 @@
         "category": "Daily Notes"
       },
       {
+        "command": "daily-notes.openDailyNote",
+        "title": "Open Daily Note",
+        "category": "Daily Notes"
+      },
+      {
         "command": "daily-notes.setUpNotebook",
         "title": "Setup Notebook",
         "category": "Daily Notes"

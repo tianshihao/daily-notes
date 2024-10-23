@@ -18,6 +18,7 @@ export function activate(context: vscode.ExtensionContext) {
   Logger.init();
   Logger.info("Congratulations, your extension 'daily-notes' is now active!");
 
+  // Entry point of the extension.
   setUp(context);
 
   context.subscriptions.push(configManager);
@@ -38,6 +39,13 @@ export function activate(context: vscode.ExtensionContext) {
     "daily-notes.openTodaysDailyNote",
     () => {
       openTodaysDailyNote();
+    }
+  );
+
+  const openDailyNoteDisposable = vscode.commands.registerCommand(
+    "daily-notes.openDailyNote",
+    () => {
+      openDailyNote();
     }
   );
 
@@ -131,10 +139,14 @@ function setUp(context: vscode.ExtensionContext) {
 
   // 3. Check the extension state and activate or deactivate the extension features.
   if (ExtensionState.Ready === Context.getInstance().getExtensionState()) {
+    Logger.info("Daily notes extension is ready, activating features.");
     activateExtensionFeatures(context);
   } else {
+    Logger.info("Daily notes extension is not ready, deactivating features.");
     deactivateExtensionFeatures(context);
   }
+
+  Logger.info("Daily notes extension initialized.");
 }
 
 function activateExtensionFeatures(context: vscode.ExtensionContext) {
@@ -241,42 +253,116 @@ async function openTodaysDailyNote() {
     }
   }
 
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, "0");
-  const day = String(today.getDate()).padStart(2, "0");
+  const formattedFileName = `${utils.getDate("-")}.md`;
+  const notePath = getNotePath(formattedFileName);
+  Logger.info(`Opening today's daily note: ${notePath}`);
 
-  const fileName = `${year}-${month}-${day}.md`;
-
-  let notebookPath = String(configManager.get("notebookPath"));
-  if (!fs.existsSync(notebookPath)) {
-    Logger.error("Notebook directory is not exists.");
-    vscode.window.showErrorMessage("Notebook directory is not exists.");
-    return;
-  }
-  let filePath = path.join(notebookPath, fileName);
-
-  Logger.info(`Opening today's daily note: ${filePath}`);
-
-  fs.access(filePath, fs.constants.F_OK, (err) => {
+  fs.access(notePath, fs.constants.F_OK, (err) => {
     if (err) {
       const initialContent = docTemplate.generateContent("dailyNote");
-      fs.writeFile(filePath, initialContent, (err) => {
+      fs.writeFile(notePath, initialContent, (err) => {
         if (err) {
           Logger.error("Failed to create file");
           vscode.window.showErrorMessage("Failed to create file");
         } else {
-          vscode.workspace.openTextDocument(filePath).then((doc) => {
+          vscode.workspace.openTextDocument(notePath).then((doc) => {
             vscode.window.showTextDocument(doc);
           });
         }
       });
     } else {
-      vscode.workspace.openTextDocument(filePath).then((doc) => {
+      vscode.workspace.openTextDocument(notePath).then((doc) => {
         vscode.window.showTextDocument(doc);
       });
     }
   });
+}
+
+async function openDailyNote() {
+  const quickPick = vscode.window.createQuickPick();
+  quickPick.placeholder = "Enter the date for the daily note (YYYYmmdd or YYYY mm dd)";
+
+  quickPick.onDidChangeValue(async (value) => {
+    const datePattern = /^\d{4} ?\d{2} ?\d{2}$/;
+    if (datePattern.test(value)) {
+      const date = parseDate(value);
+      if (date) {
+        const formattedDate = formatDate(date);
+        const notePath = getNotePath(formattedDate);
+        const items = fs.existsSync(notePath)
+          ? [{ label: formattedDate, description: "Existing note" }]
+          : [{ label: formattedDate, description: "New note" }];
+        quickPick.items = items;
+      } else {
+        quickPick.items = [];
+      }
+    } else {
+      quickPick.items = [];
+    }
+  });
+
+  quickPick.onDidAccept(async () => {
+    const selectedItem = quickPick.selectedItems[0];
+    if (selectedItem) {
+      const formattedDate = selectedItem.label;
+      const notePath = getNotePath(formattedDate);
+
+      if (fs.existsSync(notePath)) {
+        const document = await vscode.workspace.openTextDocument(notePath);
+        await vscode.window.showTextDocument(document);
+      } else {
+        const create = await vscode.window.showInformationMessage(
+          `The note for ${formattedDate} does not exist. Do you want to create it?`,
+          { modal: true },
+          "Yes",
+          "No"
+        );
+
+        if (create === "Yes") {
+          fs.writeFileSync(notePath, `# Daily Note - ${formattedDate}\n\n`);
+          const document = await vscode.workspace.openTextDocument(notePath);
+          await vscode.window.showTextDocument(document);
+        }
+      }
+    }
+    quickPick.hide();
+  });
+
+  quickPick.show();
+}
+
+function parseDate(input: string): Date | null {
+  const fullDatePattern = /^\d{4}-\d{2}-\d{2}$/;
+  const compactDatePattern = /^\d{8}$/;
+  const spacedDatePattern = /^\d{4} \d{2} \d{2}$/;
+
+  if (fullDatePattern.test(input)) {
+    return new Date(input);
+  } else if (compactDatePattern.test(input)) {
+    const year = parseInt(input.slice(0, 4), 10);
+    const month = parseInt(input.slice(4, 6), 10) - 1;
+    const day = parseInt(input.slice(6, 8), 10);
+    return new Date(year, month, day);
+  } else if (spacedDatePattern.test(input)) {
+    const year = parseInt(input.slice(0, 4), 10);
+    const month = parseInt(input.slice(5, 7), 10) - 1;
+    const day = parseInt(input.slice(8, 10), 10);
+    return new Date(year, month, day);
+  } else {
+    return null;
+  }
+}
+
+function formatDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getNotePath(date: string): string {
+  let notebookPath = String(configManager.get("notebookPath"));
+  return path.join(notebookPath, `${date}.md`);
 }
 
 async function setUpNotebook(): Promise<boolean> {
@@ -484,7 +570,7 @@ async function openNotebookInNewWindow(notebookInfo: {
 }
 
 function activateGitService() {
-  Logger.info("activateGitService");
+  Logger.info("Activating git service.");
 
   gitService.init();
 
