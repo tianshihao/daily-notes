@@ -27,3 +27,11 @@ export function initTestRepository(directory: string): void {
   git(directory, "config", "--local", "commit.gpgSign", "false");
   git(directory, "config", "--local", "core.hooksPath", path.join(directory, ".git", "hooks"));
 }
+
+export function addTestRemote(directory: string, repository: string): string {
+  const remote = path.join(directory, "backup.git");
+  git(directory, "init", "-q", "--bare", "--template=", remote);
+  git(repository, "remote", "add", "backup", remote);
+  git(repository, "push", "-qu", "backup", "main");
+  return remote;
+}

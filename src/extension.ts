@@ -1,6 +1,6 @@
 import { configManager } from "./config_manager/config_manager";
 import { docTemplate } from "./doc_template/doc_template";
-import { NotebookGit } from "./git_service/notebook_git";
+import { GitService } from "./git_service/git_service";
 import { Logger } from "./utils/logger";
 import { NotebookStatusBar, type NotebookStatusOptions } from "./widget/notebook_status_bar";
 import { findWorkspaceDirectory, isExistingDirectory, isInDirectory } from "./utils/filesystem";
@@ -11,7 +11,7 @@ import * as vscode from "vscode";
 
 export function activate(context: vscode.ExtensionContext) {
   const log = Logger.init();
-  const notebookGit = new NotebookGit();
+  const git = new GitService();
   const statusBar = new NotebookStatusBar();
   let folder: vscode.WorkspaceFolder | undefined;
   let statusOptions: NotebookStatusOptions;
@@ -23,7 +23,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   function configure() {
     folder = findWorkspaceDirectory(configManager.get("notebookPath"));
-    notebookGit.configure(folder);
+    git.configure(folder);
     statusOptions = {
       showDocumentStats: configManager.get("showDocumentStats"),
       showGitStatus: configManager.get("showGitStatus"),
@@ -37,7 +37,7 @@ export function activate(context: vscode.ExtensionContext) {
   const register = vscode.commands.registerCommand;
   context.subscriptions.push(
     log,
-    notebookGit,
+    git,
     statusBar,
     vscode.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration("dailyNotes")) {
@@ -59,9 +59,9 @@ export function activate(context: vscode.ExtensionContext) {
     register("daily-notes.toggleDocumentStats", () => toggleStatusVisibility("showDocumentStats")),
     register("daily-notes.toggleGitStatus", () => toggleStatusVisibility("showGitStatus")),
     register("daily-notes.toggleEnableGit", toggleEnableGit),
-    register("daily-notes.commit", () => notebookGit.run("commit")),
+    register("daily-notes.commit", () => git.commit()),
     register("daily-notes.sync", async () => {
-      await notebookGit.run("sync");
+      await git.sync();
       void vscode.window.showInformationMessage("Daily Notes sync complete.");
     }),
     register("daily-notes.toggleAutoCommit", () => toggleSetting("autoCommit")),

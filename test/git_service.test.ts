@@ -2,159 +2,153 @@ import * as assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import * as vscode from "vscode";
+import { configManager } from "../src/config_manager/config_manager";
+import type { IConfigurationKeyTypeMap } from "../src/config_manager/model";
 import { GitService } from "../src/git_service/git_service";
-import { git, initTestRepository } from "./git_fixture";
+import { addTestRemote, git, initTestRepository } from "./git_fixture";
 
-suite("Notebook Git service", function () {
+suite("Git service", function () {
   this.timeout(20000);
 
+  const originalGet = configManager.get;
   let directory: string;
-  let repository: string;
-  let notebook: string;
-  let note: string;
-  let service: GitService | undefined;
+  let settings: IConfigurationKeyTypeMap;
+  let service: GitService;
+  let documents: vscode.TextDocument[];
 
   setup(() => {
-    directory = fs.mkdtempSync(path.join(os.tmpdir(), "daily-notes-git-"));
-    repository = path.join(directory, "project");
-    notebook = path.join(repository, "notes");
-    note = path.join(notebook, "today.md");
-    fs.mkdirSync(notebook, { recursive: true });
-    initTestRepository(repository);
-    fs.writeFileSync(note, "Original note\n");
-    git(repository, "add", "notes/today.md");
-    git(repository, "commit", "-qm", "Initial note");
-    service = new GitService(notebook);
+    directory = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "daily-notes-service-")));
+    settings = {
+      notebookName: "", notebookPath: "", showDocumentStats: true, showGitStatus: true, enableGit: true, autoCommit: false,
+      autoCommitInterval: 10, autoSync: false, commitMessage: "Save note",
+    };
+    configManager.get = (key) => settings[key];
+    service = new GitService();
+    documents = [];
   });
 
-  teardown(() => {
+  teardown(async () => {
+    service.dispose();
+    configManager.get = originalGet;
     try {
-      service?.dispose();
-      service = undefined;
-    } finally {
-      if (directory) {
-        fs.rmSync(directory, { recursive: true, force: true, maxRetries: 3 });
+      for (const doc of documents) {
+        if (doc.isDirty) {
+          await doc.save();
+        }
       }
+      const uris = new Set(documents.map((doc) => doc.uri.toString()));
+      const tabs = vscode.window.tabGroups.all.flatMap((group) => group.tabs).filter(
+        (tab) => tab.input instanceof vscode.TabInputText && uris.has(tab.input.uri.toString())
+      );
+      if (tabs.length) {
+        await vscode.window.tabGroups.close(tabs);
+      }
+    } finally {
+      fs.rmSync(directory, { recursive: true, force: true, maxRetries: 3 });
     }
   });
 
-  function addRemote(): string {
-    const remote = path.join(directory, "backup.git");
-    git(directory, "init", "-q", "--bare", "--template=", remote);
-    git(repository, "remote", "add", "backup", remote);
-    git(repository, "push", "-qu", "backup", "main");
-    return remote;
+  function createFolder(name: string): vscode.WorkspaceFolder {
+    const uri = vscode.Uri.file(path.join(directory, name));
+    fs.mkdirSync(uri.fsPath);
+    fs.writeFileSync(path.join(uri.fsPath, "entry.md"), "Original\n");
+    return { uri, name, index: 0 };
   }
 
-  function advanceUpstream(): void {
-    git(repository, "checkout", "-qb", "remote-writer");
-    fs.writeFileSync(note, "Remote revision\n");
-    git(repository, "commit", "-qam", "Remote revision");
-    git(repository, "push", "-q", "backup", "HEAD:main");
-    git(repository, "checkout", "-q", "-");
+  function initNotebook(folder: vscode.WorkspaceFolder): void {
+    initTestRepository(folder.uri.fsPath);
+    git(folder.uri.fsPath, "add", "entry.md");
+    git(folder.uri.fsPath, "commit", "-qm", "Initial note");
   }
 
-  test("commits notebook changes and preserves the index and worktree of a sibling", async () => {
-    const sibling = path.join(repository, "notes-archive");
-    fs.mkdirSync(sibling);
-    const outside = path.join(sibling, "outside.md");
-    fs.writeFileSync(outside, "Staged outside\n");
-    git(repository, "add", "notes-archive/outside.md");
-    fs.writeFileSync(outside, "Unstaged outside\n");
-    fs.writeFileSync(path.join(sibling, "untracked.md"), "Untracked outside\n");
-    const before = git(repository, "status", "--porcelain", "-uall", "--", "notes-archive");
+  async function openNote(folder: vscode.WorkspaceFolder): Promise<vscode.TextDocument> {
+    const doc = await vscode.workspace.openTextDocument(vscode.Uri.joinPath(folder.uri, "entry.md"));
+    documents.push(doc);
+    await vscode.window.showTextDocument(doc, { preview: false });
+    return doc;
+  }
 
-    fs.unlinkSync(note);
-    fs.writeFileSync(path.join(notebook, "new.md"), "New note\n");
-    await service!.commit("Update notebook");
+  async function editNotes(notes: vscode.TextDocument[]): Promise<void> {
+    const edits = new vscode.WorkspaceEdit();
+    for (const doc of notes) {
+      edits.insert(doc.uri, new vscode.Position(0, 0), "Edited\n");
+    }
+    assert.equal(await vscode.workspace.applyEdit(edits), true);
+    for (const doc of notes) {
+      assert.equal(doc.isDirty, true);
+    }
+  }
 
-    assert.equal(git(repository, "ls-tree", "-r", "--name-only", "HEAD"), "notes/new.md");
-    assert.equal(git(repository, "status", "--porcelain", "-uall", "--", "notes-archive"), before);
-    assert.equal(git(repository, "show", ":notes-archive/outside.md"), "Staged outside");
-    assert.equal(fs.readFileSync(outside, "utf8"), "Unstaged outside\n");
-    assert.equal(git(repository, "status", "--porcelain", "--", "notes"), "");
+  test("switches repositories and saves only dirty editors inside the new notebook", async () => {
+    const first = createFolder("first");
+    const second = createFolder("notes");
+    const sibling = createFolder("notes-archive");
+    initNotebook(first);
+    initNotebook(second);
+    const firstHead = git(first.uri.fsPath, "rev-parse", "HEAD");
+    service.configure(first);
+    fs.writeFileSync(path.join(first.uri.fsPath, "pending.md"), "Pending on disk\n");
+    service.configure(second);
+
+    const previous = await openNote(first);
+    const outside = await openNote(sibling);
+    const current = await openNote(second);
+    await editNotes([previous, outside, current]);
+    await service.commit();
+
+    assert.equal(current.isDirty, false);
+    assert.equal(git(second.uri.fsPath, "show", "HEAD:entry.md"), current.getText().trimEnd());
+    assert.equal(git(first.uri.fsPath, "rev-parse", "HEAD"), firstHead);
+    for (const doc of [previous, outside]) {
+      assert.equal(doc.isDirty, true);
+      assert.equal(fs.readFileSync(doc.uri.fsPath, "utf8"), "Original\n");
+    }
   });
 
-  test("syncs the checked-out branch to its differently named upstream on a local remote", async () => {
-    const remote = addRemote();
-    git(repository, "checkout", "-qb", "journal");
-    git(repository, "branch", "--set-upstream-to", "backup/main");
-    advanceUpstream();
-    await service!.sync("Import upstream changes");
-    assert.equal(fs.readFileSync(note, "utf8"), "Remote revision\n");
+  test("syncs on request with auto-sync off and syncs each commit with it on", async () => {
+    const folder = createFolder("notes");
+    const repository = folder.uri.fsPath;
+    const note = path.join(repository, "entry.md");
+    initNotebook(folder);
+    const remote = addTestRemote(directory, repository);
+    service.configure(folder);
 
-    fs.writeFileSync(note, "Synced note\n");
-    await service!.sync("Sync notebook");
+    fs.writeFileSync(note, "Local note\n");
+    await service.commit();
+    assert.equal(git(repository, "show", "HEAD:entry.md"), "Local note");
+    assert.equal(git(remote, "show", "main:entry.md"), "Original");
 
-    assert.equal(git(repository, "branch", "--show-current"), "journal");
-    assert.equal(git(remote, "rev-parse", "refs/heads/main"), git(repository, "rev-parse", "HEAD"));
-    assert.equal(git(remote, "show", "main:notes/today.md"), "Synced note");
+    await service.sync();
+    assert.equal(git(remote, "show", "main:entry.md"), "Local note");
+
+    settings.autoSync = true;
+    service.configure(folder);
+    fs.writeFileSync(note, "Automatic sync\n");
+    await service.commit();
+    assert.equal(git(remote, "show", "main:entry.md"), "Automatic sync");
   });
 
-  test("reports divergence and keeps both histories, the working files and the index", async () => {
-    const remote = addRemote();
-    advanceUpstream();
-    const upstream = git(remote, "rev-parse", "refs/heads/main");
-    fs.writeFileSync(note, "Local revision\n");
-    fs.writeFileSync(path.join(repository, "outside.md"), "Staged outside\n");
-    git(repository, "add", "outside.md");
+  for (const change of ["disable Git", "clear notebook"] as const) {
+    test(`blocks commits and leaves the editor unsaved after ${change}`, async () => {
+      const folder = createFolder("notes");
+      initNotebook(folder);
+      const originalHead = git(folder.uri.fsPath, "rev-parse", "HEAD");
+      service.configure(folder);
+      const doc = await openNote(folder);
+      await editNotes([doc]);
 
-    await assert.rejects(service!.sync("Local revision"));
+      if (change === "disable Git") {
+        settings.enableGit = false;
+        service.configure(folder);
+      } else {
+        service.configure(undefined);
+      }
 
-    assert.equal(git(remote, "rev-parse", "refs/heads/main"), upstream);
-    assert.equal(fs.readFileSync(note, "utf8"), "Local revision\n");
-    assert.equal(git(repository, "show", "HEAD:notes/today.md"), "Local revision");
-    assert.equal(git(repository, "status", "--porcelain"), "A  outside.md");
-    assert.equal(git(repository, "stash", "list"), "");
-  });
-
-  test("preserves a retained ignored file staged for deletion", async () => {
-    const head = git(repository, "rev-parse", "HEAD");
-    fs.appendFileSync(path.join(repository, ".git", "info", "exclude"), "\n/notes/today.md\n");
-    git(repository, "rm", "--cached", "--", "notes/today.md");
-    fs.writeFileSync(note, "This content must remain private\n");
-    fs.writeFileSync(path.join(repository, "outside.md"), "Keep staged\n");
-    git(repository, "add", "outside.md");
-
-    await assert.rejects(service!.commit("Notebook changes"), /staged for deletion/);
-
-    assert.equal(git(repository, "rev-parse", "HEAD"), head);
-    assert.equal(git(repository, "status", "--porcelain"), "D  notes/today.md\nA  outside.md");
-    assert.equal(fs.readFileSync(note, "utf8"), "This content must remain private\n");
-  });
-
-  test("keeps local work accessible when fetching the upstream fails", async () => {
-    const remote = addRemote();
-    fs.renameSync(remote, remote + ".offline");
-    fs.writeFileSync(note, "Pending offline note\n");
-
-    await assert.rejects(service!.sync("Keep offline changes"));
-
-    assert.equal(fs.readFileSync(note, "utf8"), "Pending offline note\n");
-    assert.equal(git(repository, "show", "HEAD:notes/today.md"), "Pending offline note");
-    assert.equal(git(repository, "stash", "list"), "");
-  });
-
-  test("cancels queued operations when the notebook session closes", async () => {
-    fs.writeFileSync(note, "Pending in the previous notebook\n");
-    const head = git(repository, "rev-parse", "HEAD");
-    const commit = service!.commit("Queued commit");
-    service!.dispose();
-    await assert.rejects(commit, /no longer active/);
-    assert.equal(git(repository, "rev-parse", "HEAD"), head);
-  });
-
-  test("accepts queued commits after a transient index lock is released", async () => {
-    fs.writeFileSync(note, "Retry this change\n");
-    const indexLock = path.join(repository, ".git", "index.lock");
-    fs.writeFileSync(indexLock, "");
-    await assert.rejects(service!.commit("Locked commit"));
-    fs.unlinkSync(indexLock);
-
-    await Promise.all([service!.commit("Retry"), service!.commit("Already committed")]);
-
-    assert.equal(git(repository, "rev-list", "--count", "HEAD"), "2");
-    assert.equal(git(repository, "show", "HEAD:notes/today.md"), "Retry this change");
-    assert.equal(git(repository, "status", "--porcelain"), "");
-  });
+      await assert.rejects(service.commit(), /enable Daily Notes Git/i);
+      assert.equal(doc.isDirty, true);
+      assert.equal(fs.readFileSync(doc.uri.fsPath, "utf8"), "Original\n");
+      assert.equal(git(folder.uri.fsPath, "rev-parse", "HEAD"), originalHead);
+    });
+  }
 });
