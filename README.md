@@ -1,69 +1,66 @@
-# Daily Notes Extension
+# Daily Notes
 
-This is the README for the "Daily Notes" extension. This extension allows you to create a daily note with a single command.
+Open today's Markdown note in VS Code with a single command. Run it again later to pick up where you left off. Each note is a regular file in the folder you choose.
 
 ## Features
 
-The "Daily Notes" extension provides the following feature:
+| Feature | What it does |
+| --- | --- |
+| Daily notes | Open today's `YYYY-MM-DD.md`. A new note starts with the date and weekday as its heading. |
+| Timestamps | Insert the current local date and time at the cursor. |
+| Writing statistics | See the word count and detected language in the status bar as you type. |
+| Git history | Commit notebook changes manually or on a schedule you choose. |
+| Remote sync | Pull from and push to `origin/master` on demand or automatically after a commit. |
 
-### Editing
+## Write your first note
 
-- **Create Daily Note**: With a single command `daily-notes.openTodaysDailyNote`, you can create a new note for the current day. This note is named with today's date and opened in a new editor tab.
+1. Open a folder in VS Code so Daily Notes can save its workspace settings. With the extension loaded, open the Command Palette and run **Daily Notes: Open Today's Daily Note**. To load it from source, follow [Local development](#local-development).
+2. On first use, choose **Create** to make a notebook folder or **Update** to select an existing folder. Choose **Current** to use that folder in the current workspace.
+3. Start writing. For example, on November 22, 2026, the command opens `2026-11-22.md` in the notebook folder. A new note starts with the heading `# 2026-11-22 Sun`.
 
-- **Insert Date/Time**: You can insert the current date and time into the note with `daily-notes.insertTimestamp`.
+Use **Daily Notes: Insert Timestamp** to mark an entry. The status bar shows a word count for the active note, counting each Chinese character and each run of English letters as one.
 
-### Statistics
+If setup prompts again, open the notebook folder itself in VS Code. In **Workspace Settings**, set `dailyNotes.notebookPath` to its full path. The path must match one of the folders open at the root of the workspace.
 
-- **Word Count on Status Bar**: The extension shows the word count of the current note on the status bar.
+## Optional Git sync
 
-### Content Control
+For local history, initialize Git in the notebook folder or use an existing repository. After setting or changing the notebook path, reload the VS Code window so the Git service picks up the folder. Run **Daily Notes: Toggle Enable Git** to enable Git. Turning it on also enables automatic commits and turns off automatic sync.
 
-Before enabling this feature, you need to set the `dailyNotes.enableGit` to `true` through `daily-notes.toggleEnableGit`. The extension will detect the git repository in the workspace and use it to commit the changes. Make sure the git repository is initialized and connected to a remote repository.
+- **Daily Notes: Commit** saves modified notebook documents that are open in VS Code, runs `git add .` from the notebook folder, and commits the staged changes. This can include files other than today's note.
+- **Daily Notes: Sync** first attempts a local commit, then fetches, pulls changes if needed, and pushes when the branch is ahead. Sync uses **`origin/master`**. To use it, work on a local `master` branch that tracks an existing `origin/master` and has push access.
+- Use **Daily Notes: Toggle Auto Commit** to switch between manual and scheduled commits, and **Daily Notes: Toggle Auto Sync** to sync after commits.
 
-- **Commit**: You can commit the changes to the git repository with `daily-notes.commit`.
-- **Sync with Remote**: You can push the changes to the remote repository with `daily-notes.sync`.
-- **Auto Commit**: Set `dailyNotes.autoCommit` to `true`, then the extension will automatically commit the changes every `dailyNotes.autoCommitInterval` minutes to the git repository.
-- **Toggle Auto Commit**: Command allows the user to enable or disable auto commit functionality.
-- **Reset Auto Commit Interval**: Command resets the interval at which auto commit are made.
-- **Toggle Auto Sync After Commit**: Command enables or disables automatic synchronization with the remote repository after each commit.
+## Settings
 
-## Roadmap
+Open VS Code Settings and search for `dailyNotes`.
 
-The [Roadmap](ROADMAP.md).
+| Setting | Default | Purpose |
+| --- | --- | --- |
+| `dailyNotes.notebookPath` | `""` | Full path to the notebook folder. |
+| `dailyNotes.notebookName` | `""` | Notebook name recorded during setup. |
+| `dailyNotes.enableGit` | `false` | Enable Git integration for the notebook. |
+| `dailyNotes.autoCommit` | `false` | Schedule local commits. |
+| `dailyNotes.autoCommitInterval` | `10` | Minutes between automatic commits. The interval command accepts 2–600. |
+| `dailyNotes.commitMessage` | `Auto commited by Daily Notes` | Prefix for commit messages. The extension appends a timestamp. |
+| `dailyNotes.autoSync` | `false` | Sync with the remote after a commit. |
 
-## Requirements
+## Local development
 
-Install Commitizen globally on your machine using npm. Then you can initialize it in your project to use a cz-emoji-conventional adapter.
+1. Start with desktop VS Code (1.90 or later in the 1.x series), Node.js 24 with npm, and Git. Clone the repository and install its dependencies.
 
-```bash
-npm install -g commitizen
-commitizen init cz-emoji-conventional --save-dev --save-exact --force
-```
+   ```sh
+   git clone https://github.com/tianshihao/daily-notes.git
+   cd daily-notes
+   npm ci
+   ```
 
-Now, instead of using `git commit`, you can use `git cz` to commit changes using Commitizen's prompts to generate standardized commit messages. Or you can press `C` instead of `c` if you use lazygit.
+2. Open the cloned folder in VS Code. In Extensions, search for `@recommended` and enable **esbuild Problem Matchers**. The default debug task uses it to detect when the bundle is ready. The [workspace recommendations](.vscode/extensions.json) also include editor, Git, and appearance tools.
+3. In **Run and Debug**, select **Run Extension** and press **F5**. Keep the source window open. A second window titled **Extension Development Host** loads your local build.
+4. Open a folder for test notes in the **development host**. In the **source window**, set a breakpoint on the first statement in `openTodaysDailyNote()` in [src/extension.ts](src/extension.ts). Run **Daily Notes: Open Today's Daily Note** in the development host. The debugger pauses in the source window. Press **F5** to continue.
+5. Edit and save a TypeScript file. The watch tasks rebuild it. Run **Developer: Reload Window** in the development host and invoke the command again to try the change.
 
-## Extension Settings
+Run `npm run compile` for type checking, linting, and bundling. Run `npm test` to compile and execute the extension tests. On first use the runner downloads VS Code 1.90.0, the oldest version this extension supports.
 
-This extension does not contribute any settings through the `contributes.configuration` extension point.
+After staging a change, run `npm exec -- cz` to create a commit. The `npm ci` step installs Commitizen and the repository's emoji adapter.
 
-## Known Issues
-
-There are no known issues at the moment. If you encounter any problems, please report them in the [issue tracker](https://github.com/your-github-username/daily-notes/issues).
-
-## Following extension guidelines
-
-This extension follows the [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines).
-
-## Recommended Extensions
-
-We recommend installing the following extensions for an improved experience with this extension:
-
-- [Markdown All in One](https://marketplace.visualstudio.com/items?itemName=yzhang.markdown-all-in-one): All you need for Markdown (keyboard shortcuts, table of contents, auto preview and more).
-- [MarkdownLint](https://marketplace.visualstudio.com/items?itemName=DavidAnson.vscode-markdownlint): A linter for Markdown files with a focus on consistency and flexibility.
-
-## For more information
-
-- [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-- [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+See the [roadmap](ROADMAP.md) for planned features or [open an issue](https://github.com/tianshihao/daily-notes/issues) to report a problem.
