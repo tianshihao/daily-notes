@@ -26,10 +26,14 @@ If setup prompts again, open the notebook folder itself in VS Code. In **Workspa
 
 When you edit a file in the notebook folder, the status bar shows **Document Stats** followed by **Git Status** in one entry.
 
-1. **Document Stats** shows the word count and detected language, for example `Words: 42 · Language: zh`. Each Chinese character and each run of English letters counts as one word.
+1. **Document Stats** shows the word count and detected language, for example `Words: 42 · Language: zh`. Each Han ideograph counts as one, including in mixed text. English uses word boundaries, so `Meeting notes: 讨论` counts as four and `don't` counts as one. Standalone numbers and HTML tags are excluded. Language detection runs locally on a sample of the note and shows `und` when there is too little evidence.
 2. **Git Status** shows `Git: Off` when Git integration is disabled. Enabling Git expands it to show both automation settings, for example `Git: On · Auto Commit: On · Auto Sync: Off`.
 
 Run **Daily Notes: Toggle Document Stats Visibility** or **Daily Notes: Toggle Git Status Visibility** in the Command Palette to show or hide either component. Each command saves its setting in the current workspace, or in User Settings if the window has no workspace. Git operations continue according to your Git settings when the indicator is hidden. The entry disappears when both components are hidden or the active editor is outside the notebook.
+
+Only the active notebook document is analyzed. Hiding Document Stats stops both counting and language detection. Showing it again reuses the saved result if the document is unchanged. Large documents show `…` while the initial count runs in short, interruptible steps. Ordinary edits update the affected lines, and consecutive keystrokes share a status bar refresh.
+
+On VS Code 1.90, a newly opened file must fit within 52,428,800 UTF-16 code units for VS Code to expose its text to extensions. An ordinary Han character uses one unit and a supplementary character such as `𠮷` uses two. This limit applies to each file individually. [VS Code text model](https://github.com/microsoft/vscode/blob/1.90.0/src/vs/editor/common/model/textModel.ts)
 
 ## Optional Git sync
 

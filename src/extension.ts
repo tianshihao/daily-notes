@@ -46,10 +46,15 @@ export function activate(context: vscode.ExtensionContext) {
     }),
     vscode.workspace.onDidChangeWorkspaceFolders(configure),
     vscode.window.onDidChangeActiveTextEditor(refreshEditor),
-    vscode.workspace.onDidChangeTextDocument(({ document }) => {
-      const editor = vscode.window.activeTextEditor;
-      if (statusOptions.showDocumentStats && document === editor?.document && folder && isInDirectory(document.uri, folder.uri)) {
-        statusBar.render(document, statusOptions);
+    vscode.workspace.onDidChangeTextDocument((event) => {
+      const { document, contentChanges } = event;
+      if (
+        contentChanges.length > 0 &&
+        statusOptions.showDocumentStats &&
+        document === vscode.window.activeTextEditor?.document &&
+        folder && isInDirectory(document.uri, folder.uri)
+      ) {
+        statusBar.scheduleEdit(event, statusOptions);
       }
     }),
     register("daily-notes.helloWorld", () => vscode.window.showInformationMessage("Hello World from Daily Notes!")),
