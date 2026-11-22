@@ -3,7 +3,7 @@ import { docTemplate } from "./doc_template/doc_template";
 import { GitService } from "./git_service/git_service";
 import { Logger } from "./utils/logger";
 import { NotebookStatusBar, type NotebookStatusOptions } from "./widget/notebook_status_bar";
-import { findWorkspaceDirectory, isExistingDirectory, isInDirectory } from "./utils/filesystem";
+import { findWorkspaceDirectory, isExistingDirectory, isMarkdownFileInDirectory } from "./utils/filesystem";
 import { isValidCommitInterval } from "./git_service/auto_commit";
 import * as fs from "fs";
 import * as path from "path";
@@ -14,11 +14,13 @@ export function activate(context: vscode.ExtensionContext) {
   const git = new GitService();
   const statusBar = new NotebookStatusBar();
   let folder: vscode.WorkspaceFolder | undefined;
+  let activeNote: vscode.TextDocument | undefined;
   let statusOptions: NotebookStatusOptions;
 
   function refreshEditor(editor = vscode.window.activeTextEditor) {
-    const document = editor && folder && isInDirectory(editor.document.uri, folder.uri) ? editor.document : undefined;
-    statusBar.render(document, statusOptions);
+    const document = editor?.document;
+    activeNote = document && folder && isMarkdownFileInDirectory(document.uri, folder.uri) ? document : undefined;
+    statusBar.render(activeNote, statusOptions);
   }
 
   function configure() {
@@ -52,8 +54,7 @@ export function activate(context: vscode.ExtensionContext) {
       if (
         contentChanges.length > 0 &&
         statusOptions.showDocumentStats &&
-        document === vscode.window.activeTextEditor?.document &&
-        folder && isInDirectory(document.uri, folder.uri)
+        document === activeNote && document === vscode.window.activeTextEditor?.document
       ) {
         statusBar.scheduleEdit(event, statusOptions);
       }

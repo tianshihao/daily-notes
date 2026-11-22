@@ -34,3 +34,15 @@ export function isInDirectory(resource: vscode.Uri, directory: vscode.Uri): bool
   return resource.scheme === directory.scheme && resource.authority === directory.authority &&
     containsPath(directory.fsPath, resource.fsPath);
 }
+
+export function isMarkdownFileInDirectory(resource: vscode.Uri, directory: vscode.Uri): boolean {
+  if (path.extname(resource.fsPath).toLowerCase() !== ".md" || !isInDirectory(resource, directory)) {
+    return false;
+  }
+  // A link under the notebook may point outside it. Resolve it when selecting the editor.
+  try {
+    return containsPath(fs.realpathSync.native(directory.fsPath), fs.realpathSync.native(resource.fsPath));
+  } catch {
+    return false;
+  }
+}

@@ -24,14 +24,14 @@ If setup prompts again, open the notebook folder itself in VS Code. In **Workspa
 
 ## Status bar
 
-When you edit a file in the notebook folder, the status bar shows **Document Stats** followed by **Git Status** in one entry. If you set `dailyNotes.notebookName`, the name appears before the first visible component, for example `Journal  |  Git: Off`.
+The Daily Notes status bar appears only for Markdown (`.md`) files in the configured notebook folder or its subfolders. It shows **Document Stats** followed by **Git Status** in one entry. If you set `dailyNotes.notebookName`, the name appears before the first visible component, for example `Journal  |  Git: Off`.
 
 1. **Document Stats** shows the word count and detected language, for example `Words: 42 · Language: zh`. Each Han ideograph counts as one, including in mixed text. English uses word boundaries, so `Meeting notes: 讨论` counts as four and `don't` counts as one. Standalone numbers and HTML tags are excluded. Language detection runs locally on a sample of the note and shows `und` when there is too little evidence.
 2. **Git Status** shows `Git: Off` when Git integration is disabled. Enabling Git expands it to show both automation settings, for example `Git: On · Auto Commit: On · Auto Sync: Off`.
 
-Run **Daily Notes: Toggle Document Stats Visibility** or **Daily Notes: Toggle Git Status Visibility** in the Command Palette to show or hide either component. Each command saves its setting in the current workspace, or in User Settings if the window has no workspace. Git operations continue according to your Git settings when the indicator is hidden. The entry disappears when both components are hidden or the active editor is outside the notebook.
+Run **Daily Notes: Toggle Document Stats Visibility** or **Daily Notes: Toggle Git Status Visibility** in the Command Palette to show or hide either component. Each command saves its setting in the current workspace, or in User Settings if the window has no workspace. Git operations continue according to your Git settings when the indicator is hidden. Hiding both components hides the entire entry.
 
-Only the active notebook document is analyzed. Hiding Document Stats stops both counting and language detection. Showing it again reuses the saved result if the document is unchanged. Large documents show `…` while the initial count runs in short, interruptible steps. Ordinary edits update the affected lines, and consecutive keystrokes share a status bar refresh.
+Only the active Markdown note is analyzed. Hiding Document Stats stops both counting and language detection. Showing it again reuses the saved result if the document is unchanged. Large documents show `…` while the initial count runs in short, interruptible steps. Ordinary edits update the affected lines, and consecutive keystrokes share a status bar refresh.
 
 On VS Code 1.90, a newly opened file must fit within 52,428,800 UTF-16 code units for VS Code to expose its text to extensions. An ordinary Han character uses one unit and a supplementary character such as `𠮷` uses two. This limit applies to each file individually. [VS Code text model](https://github.com/microsoft/vscode/blob/1.90.0/src/vs/editor/common/model/textModel.ts)
 
@@ -51,8 +51,8 @@ Open VS Code Settings and search for `dailyNotes`.
 | --- | --- | --- |
 | `dailyNotes.notebookPath` | `""` | Full path to the notebook folder. |
 | `dailyNotes.notebookName` | `""` | Optional name shown at the start of the notebook's status bar entry. |
-| `dailyNotes.showDocumentStats` | `true` | Show the document stats item for notebook files. |
-| `dailyNotes.showGitStatus` | `true` | Show the Git status item for notebook files. |
+| `dailyNotes.showDocumentStats` | `true` | Show document stats for Markdown notes. |
+| `dailyNotes.showGitStatus` | `true` | Show the Git status item for Markdown notes. |
 | `dailyNotes.enableGit` | `false` | Enable Git integration for the notebook. |
 | `dailyNotes.autoCommit` | `false` | Schedule local commits. |
 | `dailyNotes.autoCommitInterval` | `10` | Minutes between automatic commits. The interval command accepts 2–600. |

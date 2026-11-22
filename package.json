@@ -108,12 +108,12 @@
         "dailyNotes.showDocumentStats": {
           "type": "boolean",
           "default": true,
-          "description": "Show the word count and detected language in the status bar for notebook files."
+          "description": "Show the word count and detected language for Markdown (.md) files in the notebook folder."
         },
         "dailyNotes.showGitStatus": {
           "type": "boolean",
           "default": true,
-          "description": "Show the notebook's Git, automatic commit, and automatic sync settings in the status bar."
+          "description": "Show the notebook's Git, automatic commit, and automatic sync settings in the status bar for Markdown notes."
         },
         "dailyNotes.enableGit": {
           "type": "boolean",
