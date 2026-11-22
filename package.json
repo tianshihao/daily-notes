@@ -1,6 +1,7 @@
 {
   "name": "daily-notes",
   "displayName": "Daily Notes",
+  "icon": "icon.png",
   "description": "Write daily notes using VS Code.",
   "version": "0.0.9",
   "engines": {
