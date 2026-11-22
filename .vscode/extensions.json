@@ -1,5 +1,13 @@
 {
-  // See http://go.microsoft.com/fwlink/?LinkId=827846
-  // for the documentation about the extensions.json format
-  "recommendations": ["dbaeumer.vscode-eslint", "connor4312.esbuild-problem-matchers", "ms-vscode.extension-test-runner"]
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    // The F5 pre-launch task uses $esbuild-watch to wait for the build.
+    "connor4312.esbuild-problem-matchers",
+    "ms-vscode.extension-test-runner",
+    "miguelsolorio.fluent-icons",
+    "eamodio.gitlens",
+    "pkief.material-icon-theme",
+    "sdras.night-owl",
+    "vscodevim.vim"
+  ]
 }

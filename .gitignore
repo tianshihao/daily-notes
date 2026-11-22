@@ -1,24 +1,18 @@
-# Ignore build output
-out/
-dist/
-
-# Ignore dependencies
 node_modules/
-
-# Ignore environment settings
+dist/
+out/
+.vscode-test/
+*.vsix
 .env
-
-# Ignore VS Code settings
-.vscode/
-
-# Ignore npm debug logs
+.DS_Store
 npm-debug.log*
-
-# Ignore yarn debug logs
 yarn-debug.log*
-
-# Ignore yarn error logs
 yarn-error.log*
-
-# Ignore package lock files (optional)
 yarn.lock
+
+# Share the workspace configuration used to develop the extension.
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/settings.json
+!.vscode/tasks.json
