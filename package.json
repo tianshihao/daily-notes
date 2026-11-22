@@ -98,7 +98,7 @@
         "dailyNotes.notebookName": {
           "type": "string",
           "default": "",
-          "description": "The folder where daily notes are stored."
+          "description": "Optional notebook name shown before the visible status bar components."
         },
         "dailyNotes.notebookPath": {
           "type": "string",

@@ -25,6 +25,7 @@ export function activate(context: vscode.ExtensionContext) {
     folder = findWorkspaceDirectory(configManager.get("notebookPath"));
     git.configure(folder);
     statusOptions = {
+      notebookName: configManager.get("notebookName"),
       showDocumentStats: configManager.get("showDocumentStats"),
       showGitStatus: configManager.get("showGitStatus"),
       enableGit: configManager.get("enableGit"),

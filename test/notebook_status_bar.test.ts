@@ -22,7 +22,7 @@ class RecordingItem implements vscode.StatusBarItem {
 
 suite("Notebook status bar", () => {
   const options = {
-    showDocumentStats: true, showGitStatus: true,
+    notebookName: "", showDocumentStats: true, showGitStatus: true,
     enableGit: true, autoCommit: true, autoSync: false,
   };
   let document: vscode.TextDocument;
@@ -64,26 +64,35 @@ suite("Notebook status bar", () => {
     assert.equal(item.disposed, true);
   });
 
-  test("toggles each group independently and hides both outside the notebook", () => {
+  test("prefixes the visible groups with the notebook name and hides the item outside the notebook", () => {
     statusBar = createBar();
-    statusBar.render(document, { ...options, showDocumentStats: false });
+    const named = { ...options, notebookName: "日记" };
+    statusBar.render(document, named);
     const [item] = items;
     assert.equal(item.visible, true);
-    assert.equal(item.text, "Git: On · Auto Commit: On · Auto Sync: Off");
+    assert.equal(item.text, "日记  |  Words: 6 · Language: zh  |  Git: On · Auto Commit: On · Auto Sync: Off");
 
-    statusBar.render(document, { ...options, showGitStatus: false });
+    statusBar.render(document, { ...named, showDocumentStats: false });
     assert.equal(item.visible, true);
-    assert.equal(item.text, "Words: 6 · Language: zh");
+    assert.equal(item.text, "日记  |  Git: On · Auto Commit: On · Auto Sync: Off");
 
-    statusBar.render(document, { ...options, showDocumentStats: false, showGitStatus: false });
+    statusBar.render(document, { ...named, showGitStatus: false });
+    assert.equal(item.visible, true);
+    assert.equal(item.text, "日记  |  Words: 6 · Language: zh");
+
+    statusBar.render(document, { ...named, showDocumentStats: false, showGitStatus: false });
     assert.equal(item.visible, false);
 
-    statusBar.render(document, options);
-    statusBar.render(undefined, options);
+    statusBar.render(document, named);
+    statusBar.render(undefined, named);
     assert.equal(item.visible, false);
 
-    statusBar.render(document, options);
+    statusBar.render(document, { ...named, notebookName: "My $(book)", showGitStatus: false });
+    assert.equal(item.text, "My \\$(book)  |  Words: 6 · Language: zh");
+
+    statusBar.render(document, { ...named, notebookName: " \t " });
     assert.equal(item.visible, true);
+    assert.equal(item.text, "Words: 6 · Language: zh  |  Git: On · Auto Commit: On · Auto Sync: Off");
     assert.equal(items.length, 1);
     statusBar.dispose();
   });
@@ -120,17 +129,17 @@ suite("Notebook status bar", () => {
     statusBar.render(document, options);
     statusBar.render(other, options);
     assert.ok(jobs[1].signal.aborted);
-    statusBar.render(other, { ...options, enableGit: false });
+    statusBar.render(other, { ...options, notebookName: "Journal", enableGit: false });
     assert.equal(jobs.length, 3);
-    assert.equal(item.text, "Words: … · Language: …  |  Git: Off");
+    assert.equal(item.text, "Journal  |  Words: … · Language: …  |  Git: Off");
     jobs[1].finish();
     jobs[2].finish();
     await Promise.resolve();
     assert.deepEqual(completed, [other]);
-    assert.equal(item.text, "Words: 3 · Language: en  |  Git: Off");
+    assert.equal(item.text, "Journal  |  Words: 3 · Language: en  |  Git: Off");
 
     statusBar.render(document, options);
-    statusBar.render(undefined, options);
+    statusBar.render(undefined, { ...options, notebookName: "Journal" });
     assert.ok(jobs[3].signal.aborted);
     jobs[3].finish();
     await Promise.resolve();

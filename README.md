@@ -24,7 +24,7 @@ If setup prompts again, open the notebook folder itself in VS Code. In **Workspa
 
 ## Status bar
 
-When you edit a file in the notebook folder, the status bar shows **Document Stats** followed by **Git Status** in one entry.
+When you edit a file in the notebook folder, the status bar shows **Document Stats** followed by **Git Status** in one entry. If you set `dailyNotes.notebookName`, the name appears before the first visible component, for example `Journal  |  Git: Off`.
 
 1. **Document Stats** shows the word count and detected language, for example `Words: 42 · Language: zh`. Each Han ideograph counts as one, including in mixed text. English uses word boundaries, so `Meeting notes: 讨论` counts as four and `don't` counts as one. Standalone numbers and HTML tags are excluded. Language detection runs locally on a sample of the note and shows `und` when there is too little evidence.
 2. **Git Status** shows `Git: Off` when Git integration is disabled. Enabling Git expands it to show both automation settings, for example `Git: On · Auto Commit: On · Auto Sync: Off`.
@@ -50,7 +50,7 @@ Open VS Code Settings and search for `dailyNotes`.
 | Setting | Default | Purpose |
 | --- | --- | --- |
 | `dailyNotes.notebookPath` | `""` | Full path to the notebook folder. |
-| `dailyNotes.notebookName` | `""` | Notebook name recorded during setup. |
+| `dailyNotes.notebookName` | `""` | Optional name shown at the start of the notebook's status bar entry. |
 | `dailyNotes.showDocumentStats` | `true` | Show the document stats item for notebook files. |
 | `dailyNotes.showGitStatus` | `true` | Show the Git status item for notebook files. |
 | `dailyNotes.enableGit` | `false` | Enable Git integration for the notebook. |

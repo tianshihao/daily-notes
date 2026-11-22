@@ -3,7 +3,7 @@ import type { IConfigurationKeyTypeMap } from "../config_manager/model";
 import { DocumentAnalyzer } from "../document_analysis/document_analyzer";
 
 export type NotebookStatusOptions = Pick<IConfigurationKeyTypeMap,
-  "showDocumentStats" | "showGitStatus" | "enableGit" | "autoCommit" | "autoSync"
+  "notebookName" | "showDocumentStats" | "showGitStatus" | "enableGit" | "autoCommit" | "autoSync"
 >;
 
 interface StatusComponent {
@@ -124,7 +124,9 @@ export class NotebookStatusBar implements vscode.Disposable {
       this.item.hide();
       return;
     }
-    const parts: string[] = [];
+    // Status bar text interprets icon markup, even inside user-supplied names.
+    const name = options.notebookName.trim().replace(/\$\([a-z0-9-]+(?:~[a-z]+)?\)/gi, "\\$&");
+    const parts = name ? [name] : [];
     for (const component of visibleComponents) {
       const index = parts.length;
       parts.push(component.text(document, options, text => {
