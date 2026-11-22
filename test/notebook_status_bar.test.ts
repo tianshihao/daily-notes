@@ -1,6 +1,6 @@
 import * as assert from "node:assert/strict";
 import * as vscode from "vscode";
-import { NotebookStatusBar } from "../widget/notebook_status_bar";
+import { NotebookStatusBar } from "../src/widget/notebook_status_bar";
 
 class RecordingItem implements vscode.StatusBarItem {
   text = "";

@@ -1,5 +1,5 @@
 import * as assert from "node:assert/strict";
-import { AutoCommitScheduler } from "../git_service/auto_commit";
+import { AutoCommitScheduler } from "../src/git_service/auto_commit";
 
 function setupTimer() {
   const timers = new Map<() => Promise<void>, number>();

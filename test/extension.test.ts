@@ -1,5 +1,5 @@
 import * as assert from "assert";
-import { getDocumentStats } from "../text_service/text_service";
+import { getDocumentStats } from "../src/text_service/text_service";
 
 suite("Notebook word count", () => {
   test("counts English words and Chinese characters in the same note", () => {

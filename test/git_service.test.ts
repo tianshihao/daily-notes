@@ -2,7 +2,7 @@ import * as assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { GitService } from "../git_service/git_service";
+import { GitService } from "../src/git_service/git_service";
 import { git, initTestRepository } from "./git_fixture";
 
 suite("Notebook Git service", function () {

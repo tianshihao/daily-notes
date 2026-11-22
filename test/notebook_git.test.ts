@@ -3,9 +3,9 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import * as vscode from "vscode";
-import { configManager } from "../config_manager/config_manager";
-import type { IConfigurationKeyTypeMap } from "../config_manager/model";
-import { NotebookGit } from "../git_service/notebook_git";
+import { configManager } from "../src/config_manager/config_manager";
+import type { IConfigurationKeyTypeMap } from "../src/config_manager/model";
+import { NotebookGit } from "../src/git_service/notebook_git";
 import { git, initTestRepository } from "./git_fixture";
 
 suite("Notebook Git controller", function () {

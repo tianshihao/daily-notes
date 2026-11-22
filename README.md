@@ -70,7 +70,7 @@ Open VS Code Settings and search for `dailyNotes`.
 4. Open a folder for test notes in the **development host**. In the **source window**, set a breakpoint on the first statement in `openTodaysDailyNote()` in [src/extension.ts](src/extension.ts). Run **Daily Notes: Open Today's Daily Note** in the development host. The debugger pauses in the source window. Press **F5** to continue.
 5. Edit and save a TypeScript file. The watch tasks rebuild it. Run **Developer: Reload Window** in the development host and invoke the command again to try the change.
 
-Run `npm run compile` for type checking, linting, and bundling. Run `npm test` to compile and execute the extension tests. On first use the runner downloads VS Code 1.90.0, the oldest version this extension supports.
+The extension code lives in `src/` and its test suites and fixtures live in `test/`. Run `npm run compile` for type checking, linting, and bundling. Run `npm test` to compile and execute the extension tests. On first use the runner downloads VS Code 1.90.0, the oldest version this extension supports.
 
 After staging a change, run `npm exec -- cz` to create a commit. The `npm ci` step installs Commitizen and the repository's emoji adapter.
 
