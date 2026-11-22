@@ -11,7 +11,7 @@ export type IDocTemplateKey = keyof IDocTemplate;
 class DocTemplate<M> {
   private static instance: DocTemplate<IDocTemplate>;
 
-  constructor() {}
+  constructor() { }
 
   getInstance(): DocTemplate<IDocTemplate> {
     if (!DocTemplate.instance) {

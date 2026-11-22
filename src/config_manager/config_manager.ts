@@ -22,7 +22,7 @@ class ConfigurationManager<M> implements IConfigurationService<M> {
   /**
    * Disposes the configuration manager.
    */
-  public dispose(): void {}
+  public dispose(): void { }
 
   /**
    * Gets the value of a configuration key.

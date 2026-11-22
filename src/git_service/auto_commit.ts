@@ -14,7 +14,7 @@ export class AutoCommitScheduler {
   private cancelTimer?: () => void;
   private running = false;
 
-  constructor(private readonly startTimer: SetTimer = setTimer) {}
+  constructor(private readonly startTimer: SetTimer = setTimer) { }
 
   schedule(minutes: number, task: () => Promise<void>): void {
     this.dispose();
