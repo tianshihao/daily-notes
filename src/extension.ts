@@ -2,8 +2,7 @@ import { configManager } from "./config_manager/config_manager";
 import { docTemplate } from "./doc_template/doc_template";
 import { NotebookGit } from "./git_service/notebook_git";
 import { Logger } from "./utils/logger";
-import { statusBarWidgetManager } from "./widget/status_bar_widget";
-import { textService } from "./text_service/text_service";
+import { NotebookStatusBar, type NotebookStatusOptions } from "./widget/notebook_status_bar";
 import { getNotebookFolder, isNotebookDocument } from "./notebook/notebook_folder";
 import { isValidCommitInterval } from "./git_service/auto_commit";
 import * as fs from "fs";
@@ -13,30 +12,25 @@ import * as vscode from "vscode";
 export function activate(context: vscode.ExtensionContext) {
   const log = Logger.init();
   const notebookGit = new NotebookGit();
+  const statusBar = new NotebookStatusBar();
   let folder: vscode.WorkspaceFolder | undefined;
+  let statusOptions: NotebookStatusOptions;
 
   function refreshEditor(editor = vscode.window.activeTextEditor) {
-    if (editor && folder && isNotebookDocument(editor.document, folder)) {
-      updateTextState(editor);
-      statusBarWidgetManager.showAll();
-    } else {
-      statusBarWidgetManager.hideAll();
-    }
+    const document = editor && folder && isNotebookDocument(editor.document, folder) ? editor.document : undefined;
+    statusBar.render(document, statusOptions);
   }
 
   function configure() {
     folder = getNotebookFolder();
     notebookGit.configure(folder);
-    if (folder) {
-      const gitEnabled = configManager.get("enableGit");
-      statusBarWidgetManager.getWidget("enableGit").updateContent(`Git: ${gitEnabled ? "On" : "Off"}`);
-      statusBarWidgetManager.getWidget("autoCommit").updateContent(
-        `Auto Commit: ${gitEnabled && configManager.get("autoCommit") ? "On" : "Off"}`
-      );
-      statusBarWidgetManager.getWidget("autoSync").updateContent(
-        `Auto Sync: ${gitEnabled && configManager.get("autoSync") ? "On" : "Off"}`
-      );
-    }
+    statusOptions = {
+      showDocumentStats: configManager.get("showDocumentStats"),
+      showGitStatus: configManager.get("showGitStatus"),
+      enableGit: configManager.get("enableGit"),
+      autoCommit: configManager.get("autoCommit"),
+      autoSync: configManager.get("autoSync"),
+    };
     refreshEditor();
   }
 
@@ -44,7 +38,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     log,
     notebookGit,
-    { dispose: () => statusBarWidgetManager.disposeAll() },
+    statusBar,
     vscode.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration("dailyNotes")) {
         configure();
@@ -54,14 +48,16 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.window.onDidChangeActiveTextEditor(refreshEditor),
     vscode.workspace.onDidChangeTextDocument(({ document }) => {
       const editor = vscode.window.activeTextEditor;
-      if (editor && document === editor.document && folder && isNotebookDocument(document, folder)) {
-        updateTextState(editor);
+      if (statusOptions.showDocumentStats && document === editor?.document && folder && isNotebookDocument(document, folder)) {
+        statusBar.render(document, statusOptions);
       }
     }),
     register("daily-notes.helloWorld", () => vscode.window.showInformationMessage("Hello World from Daily Notes!")),
     register("daily-notes.openTodaysDailyNote", openTodaysDailyNote),
     register("daily-notes.setUpNotebook", setUpNotebook),
     register("daily-notes.insertTimestamp", insertTimestamp),
+    register("daily-notes.toggleDocumentStats", () => toggleStatusVisibility("showDocumentStats")),
+    register("daily-notes.toggleGitStatus", () => toggleStatusVisibility("showGitStatus")),
     register("daily-notes.toggleEnableGit", toggleEnableGit),
     register("daily-notes.commit", () => notebookGit.run("commit")),
     register("daily-notes.sync", async () => {
@@ -353,23 +349,11 @@ async function openNotebookInNewWindow(notebookInfo: {
   return true;
 }
 
-function updateTextState(activeEditor: vscode.TextEditor) {
-  Logger.info("updateTextState");
-
-  statusBarWidgetManager
-    .getWidget("wordCount")
-    .updateContent(
-      `Words: ${textService.countWords(
-        activeEditor.document.getText(),
-        activeEditor.document.fileName
-      )}`
-    );
-
-  statusBarWidgetManager
-    .getWidget("language")
-    .updateContent(
-      `Language: ${textService.getLanguage(activeEditor.document.fileName)}`
-    );
+function toggleStatusVisibility(key: "showDocumentStats" | "showGitStatus") {
+  const target = vscode.workspace.workspaceFolders?.length || vscode.workspace.workspaceFile
+    ? vscode.ConfigurationTarget.Workspace
+    : vscode.ConfigurationTarget.Global;
+  return configManager.update(key, !configManager.get(key), target);
 }
 
 async function toggleEnableGit() {

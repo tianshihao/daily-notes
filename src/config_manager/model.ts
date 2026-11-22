@@ -4,6 +4,8 @@
 export interface IConfigurationKeyTypeMap {
   notebookPath: string;
   notebookName: string;
+  showDocumentStats: boolean;
+  showGitStatus: boolean;
   enableGit: boolean;
   commitMessage: string;
   autoCommit: boolean;

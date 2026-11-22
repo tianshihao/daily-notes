@@ -18,9 +18,18 @@ Open today's Markdown note in VS Code with a single command. Run it again later 
 2. On first use, choose **Create** to make a notebook folder or **Update** to select an existing folder. Choose **Current** to use that folder in the current workspace.
 3. Start writing. For example, on November 22, 2026, the command opens `2026-11-22.md` in the notebook folder. A new note starts with the heading `# 2026-11-22 Sun`.
 
-Use **Daily Notes: Insert Timestamp** to mark an entry. The status bar shows a word count for the active note, counting each Chinese character and each run of English letters as one.
+Use **Daily Notes: Insert Timestamp** to mark an entry.
 
 If setup prompts again, open the notebook folder itself in VS Code. In **Workspace Settings**, set `dailyNotes.notebookPath` to its full path. The path must match one of the folders open at the root of the workspace.
+
+## Status bar
+
+When you edit a file in the notebook folder, the status bar shows **Document Stats** followed by **Git Status** in one entry.
+
+1. **Document Stats** shows the word count and detected language, for example `Words: 42 · Language: zh`. Each Chinese character and each run of English letters counts as one word.
+2. **Git Status** shows `Git: Off` when Git integration is disabled. Enabling Git expands it to show both automation settings, for example `Git: On · Auto Commit: On · Auto Sync: Off`.
+
+Run **Daily Notes: Toggle Document Stats Visibility** or **Daily Notes: Toggle Git Status Visibility** in the Command Palette to show or hide either component. Each command saves its setting in the current workspace, or in User Settings if the window has no workspace. Git operations continue according to your Git settings when the indicator is hidden. The entry disappears when both components are hidden or the active editor is outside the notebook.
 
 ## Optional Git sync
 
@@ -38,6 +47,8 @@ Open VS Code Settings and search for `dailyNotes`.
 | --- | --- | --- |
 | `dailyNotes.notebookPath` | `""` | Full path to the notebook folder. |
 | `dailyNotes.notebookName` | `""` | Notebook name recorded during setup. |
+| `dailyNotes.showDocumentStats` | `true` | Show the document stats item for notebook files. |
+| `dailyNotes.showGitStatus` | `true` | Show the Git status item for notebook files. |
 | `dailyNotes.enableGit` | `false` | Enable Git integration for the notebook. |
 | `dailyNotes.autoCommit` | `false` | Schedule local commits. |
 | `dailyNotes.autoCommitInterval` | `10` | Minutes between automatic commits. The interval command accepts 2–600. |

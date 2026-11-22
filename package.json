@@ -52,6 +52,16 @@
         "category": "Daily Notes"
       },
       {
+        "command": "daily-notes.toggleDocumentStats",
+        "title": "Toggle Document Stats Visibility",
+        "category": "Daily Notes"
+      },
+      {
+        "command": "daily-notes.toggleGitStatus",
+        "title": "Toggle Git Status Visibility",
+        "category": "Daily Notes"
+      },
+      {
         "command": "daily-notes.toggleEnableGit",
         "title": "Toggle Enable Git",
         "category": "Daily Notes"
@@ -94,6 +104,16 @@
           "type": "string",
           "default": "",
           "description": "The directory where daily notes are stored."
+        },
+        "dailyNotes.showDocumentStats": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the word count and detected language in the status bar for notebook files."
+        },
+        "dailyNotes.showGitStatus": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the notebook's Git, automatic commit, and automatic sync settings in the status bar."
         },
         "dailyNotes.enableGit": {
           "type": "boolean",
