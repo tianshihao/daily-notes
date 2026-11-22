@@ -3,7 +3,7 @@ import { docTemplate } from "./doc_template/doc_template";
 import { NotebookGit } from "./git_service/notebook_git";
 import { Logger } from "./utils/logger";
 import { NotebookStatusBar, type NotebookStatusOptions } from "./widget/notebook_status_bar";
-import { getNotebookFolder, isNotebookDocument } from "./notebook/notebook_folder";
+import { findWorkspaceDirectory, isExistingDirectory, isInDirectory } from "./utils/filesystem";
 import { isValidCommitInterval } from "./git_service/auto_commit";
 import * as fs from "fs";
 import * as path from "path";
@@ -17,12 +17,12 @@ export function activate(context: vscode.ExtensionContext) {
   let statusOptions: NotebookStatusOptions;
 
   function refreshEditor(editor = vscode.window.activeTextEditor) {
-    const document = editor && folder && isNotebookDocument(editor.document, folder) ? editor.document : undefined;
+    const document = editor && folder && isInDirectory(editor.document.uri, folder.uri) ? editor.document : undefined;
     statusBar.render(document, statusOptions);
   }
 
   function configure() {
-    folder = getNotebookFolder();
+    folder = findWorkspaceDirectory(configManager.get("notebookPath"));
     notebookGit.configure(folder);
     statusOptions = {
       showDocumentStats: configManager.get("showDocumentStats"),
@@ -48,7 +48,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.window.onDidChangeActiveTextEditor(refreshEditor),
     vscode.workspace.onDidChangeTextDocument(({ document }) => {
       const editor = vscode.window.activeTextEditor;
-      if (statusOptions.showDocumentStats && document === editor?.document && folder && isNotebookDocument(document, folder)) {
+      if (statusOptions.showDocumentStats && document === editor?.document && folder && isInDirectory(document.uri, folder.uri)) {
         statusBar.render(document, statusOptions);
       }
     }),
@@ -97,12 +97,19 @@ function insertTimestamp() {
 async function openTodaysDailyNote() {
   Logger.info("openTodaysDailyNote");
 
-  if (!getNotebookFolder()) {
+  let notebookPath = findWorkspaceDirectory(configManager.get("notebookPath"))?.uri.fsPath;
+  if (!notebookPath) {
     Logger.warn("Notebook directory is not set.");
     // todo tianshihao, should it return by a boolean value?
     if (false === (await setUpNotebook())) {
       Logger.error("Failed to set up notebook directory.");
       vscode.window.showErrorMessage("Failed to set up notebook directory.");
+      return;
+    }
+    notebookPath = configManager.get("notebookPath");
+    if (!isExistingDirectory(notebookPath)) {
+      Logger.error("Notebook directory does not exist.");
+      vscode.window.showErrorMessage("Notebook directory does not exist.");
       return;
     }
   }
@@ -114,13 +121,7 @@ async function openTodaysDailyNote() {
 
   const fileName = `${year}-${month}-${day}.md`;
 
-  let notebookPath = String(configManager.get("notebookPath"));
-  if (!fs.existsSync(notebookPath)) {
-    Logger.error("Notebook directory is not exists.");
-    vscode.window.showErrorMessage("Notebook directory is not exists.");
-    return;
-  }
-  let filePath = path.join(notebookPath, fileName);
+  const filePath = path.join(notebookPath, fileName);
 
   Logger.info(`Opening today's daily note: ${filePath}`);
 

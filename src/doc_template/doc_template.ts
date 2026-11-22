@@ -1,4 +1,4 @@
-import { utils } from "../utils/utils";
+import { dateTime } from "../utils/datetime";
 
 export interface IDocTemplate {
   dailyNote: string;
@@ -22,8 +22,8 @@ class DocTemplate<M> {
   }
 
   private generateDailyNote(): string {
-    const date = utils.getDate().replace(new RegExp("/", "g"), "-");
-    const weekDay = utils.getWeekDay();
+    const date = dateTime.getDate().replace(new RegExp("/", "g"), "-");
+    const weekDay = dateTime.getWeekDay();
     const dateTitle = `${date} ${weekDay}`;
 
     return `# ${dateTitle}\n`;
@@ -31,7 +31,7 @@ class DocTemplate<M> {
 
   private generateWeeklyNote(): string {
     // Title is 'Week <week number>'
-    const weekNumber = utils.getWeekNumber();
+    const weekNumber = dateTime.getWeekNumber();
     return `# Week ${weekNumber}\n`;
   }
 

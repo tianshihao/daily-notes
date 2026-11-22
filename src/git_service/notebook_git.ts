@@ -1,15 +1,15 @@
 import * as vscode from "vscode";
 import { configManager } from "../config_manager/config_manager";
 import { Logger } from "../utils/logger";
-import { isNotebookDocument } from "../notebook/notebook_folder";
-import { utils } from "../utils/utils";
+import { isInDirectory } from "../utils/filesystem";
+import { dateTime } from "../utils/datetime";
 import { AutoCommitScheduler, isValidCommitInterval } from "./auto_commit";
 import { GitService } from "./git_service";
 
 async function saveNotebookEditors(folder: vscode.WorkspaceFolder, signal: AbortSignal): Promise<void> {
   for (const doc of vscode.workspace.textDocuments) {
     signal.throwIfAborted();
-    if (doc.isDirty && isNotebookDocument(doc, folder) && !(await doc.save())) {
+    if (doc.isDirty && isInDirectory(doc.uri, folder.uri) && !(await doc.save())) {
       throw new Error(`Could not save ${doc.fileName}. Git operation cancelled.`);
     }
   }
@@ -57,7 +57,7 @@ export class NotebookGit implements vscode.Disposable {
     }
 
     const prefix = configManager.get("commitMessage") || "Auto commited by Daily Notes";
-    const message = `${prefix} at ${utils.getTimestamp()}`;
+    const message = `${prefix} at ${dateTime.getTimestamp()}`;
     if (action === "sync" || configManager.get("autoSync")) {
       await session.git.sync(message);
     } else {

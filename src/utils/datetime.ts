@@ -1,14 +1,14 @@
-class Utils {
-  private static instance: Utils;
+class DateTime {
+  private static instance: DateTime;
 
   private constructor() {}
 
-  static getInstance(): Utils {
-    if (!Utils.instance) {
-      Utils.instance = new Utils();
+  static getInstance(): DateTime {
+    if (!DateTime.instance) {
+      DateTime.instance = new DateTime();
     }
 
-    return Utils.instance;
+    return DateTime.instance;
   }
 
   /**
@@ -77,4 +77,4 @@ class Utils {
 
 }
 
-export const utils = Utils.getInstance();
+export const dateTime = DateTime.getInstance();
