@@ -1,206 +1,79 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import { configManager } from "./config_manager/config_manager";
 import { docTemplate } from "./doc_template/doc_template";
-import { gitService } from "./git_service/git_service";
+import { NotebookGit } from "./git_service/notebook_git";
 import { Logger } from "./utils/logger";
 import { statusBarWidgetManager } from "./widget/status_bar_widget";
 import { textService } from "./text_service/text_service";
-import { utils } from "./utils/utils";
+import { getNotebookFolder, isNotebookDocument } from "./notebook/notebook_folder";
+import { isValidCommitInterval } from "./git_service/auto_commit";
 import * as fs from "fs";
 import * as path from "path";
 import * as vscode from "vscode";
-import Context, { ExtensionState } from "./context/context";
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
-  Logger.init();
-  Logger.info("Congratulations, your extension 'daily-notes' is now active!");
+  const log = Logger.init();
+  const notebookGit = new NotebookGit();
+  let folder: vscode.WorkspaceFolder | undefined;
 
-  setUp(context);
-
-  context.subscriptions.push(configManager);
-
-  // The command has been defined in the package.json file
-  // Now provide the implementation of the command with registerCommand
-  // The commandId parameter must match the command field in package.json
-  const helloWorldDisposable = vscode.commands.registerCommand(
-    "daily-notes.helloWorld",
-    () => {
-      // The code you place here will be executed every time your command is
-      // executed. Display a message box to the user
-      vscode.window.showInformationMessage("Hello World from Daily Notes!");
-    }
-  );
-
-  const openTodaysDailyNoteDisposable = vscode.commands.registerCommand(
-    "daily-notes.openTodaysDailyNote",
-    () => {
-      openTodaysDailyNote();
-    }
-  );
-
-  // todo tianshihao, remove next time.
-  const setNotebookDisposable = vscode.commands.registerCommand(
-    "daily-notes.setUpNotebook",
-    () => {
-      setUpNotebook();
-    }
-  );
-
-  const insertTimestampDisposable = vscode.commands.registerCommand(
-    "daily-notes.insertTimestamp",
-    () => {
-      insertTimestamp();
-    }
-  );
-
-  const toggleEnableGitDisposable = vscode.commands.registerCommand(
-    "daily-notes.toggleEnableGit",
-    async () => {
-      toggleEnableGit();
-    }
-  );
-
-  const commitDisposable = vscode.commands.registerCommand(
-    "daily-notes.commit",
-    () => {
-      commit();
-    }
-  );
-
-  const toggleAutoCommitDisposable = vscode.commands.registerCommand(
-    "daily-notes.toggleAutoCommit",
-    async () => {
-      toggleAutoCommit();
-    }
-  );
-
-  const resetAutoCommitIntervalDisposable = vscode.commands.registerCommand(
-    "daily-notes.resetAutoCommitInterval",
-    async () => {
-      resetAutoCommitInterval();
-    }
-  );
-
-  const syncDisposable = vscode.commands.registerCommand(
-    "daily-notes.sync",
-    () => {
-      sync();
-    }
-  );
-
-  const toggleautoSyncDisposable = vscode.commands.registerCommand(
-    "daily-notes.toggleautoSync",
-    async () => {
-      toggleautoSync();
-    }
-  );
-
-  context.subscriptions.push(
-    helloWorldDisposable,
-    openTodaysDailyNoteDisposable,
-    setNotebookDisposable,
-    insertTimestampDisposable,
-    toggleEnableGitDisposable,
-    commitDisposable,
-    toggleAutoCommitDisposable,
-    resetAutoCommitIntervalDisposable,
-    syncDisposable,
-    toggleautoSyncDisposable
-  );
-}
-
-// After openTodoysDailyNote, the setUp will work properly in the next time.
-function setUp(context: vscode.ExtensionContext) {
-  Logger.info("Initializing daily notes extension.");
-
-  // 1. Init context first.
-  resetContext();
-
-  // 2. Establish the listeners.
-  if (false === Context.getInstance().getIsConfigurationChangeListenerSet()) {
-    monitorConfigurationChanges(context);
-    Context.getInstance().setIsConfigurationChangeListenerSet(true);
-  }
-  if (false === Context.getInstance().getIsWorkspaceFolderChangeListenerSet()) {
-    monitorWorkspaceChanges(context);
-    Context.getInstance().setIsWorkspaceFolderChangeListenerSet(true);
-  }
-
-  // 3. Check the extension state and activate or deactivate the extension features.
-  if (ExtensionState.Ready === Context.getInstance().getExtensionState()) {
-    activateExtensionFeatures(context);
-  } else {
-    deactivateExtensionFeatures(context);
-  }
-}
-
-function activateExtensionFeatures(context: vscode.ExtensionContext) {
-  // checkWorkspace();
-
-  activateGitService();
-
-  // todo tianshihao, refactor to be toggleable or the manager of listener.
-  monitorActiveEditorChanges(context);
-
-  Context.getInstance().setExtensionState(ExtensionState.Running);
-}
-
-function deactivateExtensionFeatures(context: vscode.ExtensionContext) {
-  disableGitService();
-
-  // todo tianshihao, disable the word count of text service.
-
-  // todo tianshihao, should the toggling the visibility of widgets in a single location?
-  statusBarWidgetManager.hideAll();
-}
-
-function resetContext() {
-  const context = Context.getInstance();
-
-  if (true === utils.isValidNotebookPath(configManager.get("notebookPath"))) {
-    context.setExtensionState(ExtensionState.Ready);
-    context.setIsNotebookConfigured(true);
-  } else {
-    context.setExtensionState(ExtensionState.Waiting);
-    context.setIsNotebookConfigured(false);
-  }
-}
-
-function checkWorkspace() {
-  const workspaceFolders = vscode.workspace.workspaceFolders;
-  const context = Context.getInstance();
-
-  // A new empty window. The extension should do nothing for now.
-  if (!workspaceFolders) {
-    context.setExtensionState(ExtensionState.Waiting);
-  } else if (workspaceFolders) {
-    if (true === context.getIsNotebookConfigured()) {
-      if (
-        false ===
-        utils.isPathPresentInWorkspace(configManager.get("notebookPath"))
-      ) {
-        // The notebook path is not present in the workspace.
-        context.setExtensionState(ExtensionState.Waiting);
-      }
+  function refreshEditor(editor = vscode.window.activeTextEditor) {
+    if (editor && folder && isNotebookDocument(editor.document, folder)) {
+      updateTextState(editor);
+      statusBarWidgetManager.showAll();
     } else {
-      // If the workspace is not configured, the extension also does nothing.
-      context.setExtensionState(ExtensionState.Waiting);
+      statusBarWidgetManager.hideAll();
     }
   }
-}
 
-// function deactivateExtension() {
-//   console.log(
-//     "Deactivating extension as no notebook directory is present in the workspace."
-//   );
-//   vscode.commands.executeCommand(
-//     "workbench.action.unloadExtension",
-//     "daily-notes"
-//   );
-// }
+  function configure() {
+    folder = getNotebookFolder();
+    notebookGit.configure(folder);
+    if (folder) {
+      const gitEnabled = configManager.get("enableGit");
+      statusBarWidgetManager.getWidget("enableGit").updateContent(`Git: ${gitEnabled ? "On" : "Off"}`);
+      statusBarWidgetManager.getWidget("autoCommit").updateContent(
+        `Auto Commit: ${gitEnabled && configManager.get("autoCommit") ? "On" : "Off"}`
+      );
+      statusBarWidgetManager.getWidget("autoSync").updateContent(
+        `Auto Sync: ${gitEnabled && configManager.get("autoSync") ? "On" : "Off"}`
+      );
+    }
+    refreshEditor();
+  }
+
+  const register = vscode.commands.registerCommand;
+  context.subscriptions.push(
+    log,
+    notebookGit,
+    { dispose: () => statusBarWidgetManager.disposeAll() },
+    vscode.workspace.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration("dailyNotes")) {
+        configure();
+      }
+    }),
+    vscode.workspace.onDidChangeWorkspaceFolders(configure),
+    vscode.window.onDidChangeActiveTextEditor(refreshEditor),
+    vscode.workspace.onDidChangeTextDocument(({ document }) => {
+      const editor = vscode.window.activeTextEditor;
+      if (editor && document === editor.document && folder && isNotebookDocument(document, folder)) {
+        updateTextState(editor);
+      }
+    }),
+    register("daily-notes.helloWorld", () => vscode.window.showInformationMessage("Hello World from Daily Notes!")),
+    register("daily-notes.openTodaysDailyNote", openTodaysDailyNote),
+    register("daily-notes.setUpNotebook", setUpNotebook),
+    register("daily-notes.insertTimestamp", insertTimestamp),
+    register("daily-notes.toggleEnableGit", toggleEnableGit),
+    register("daily-notes.commit", () => notebookGit.run("commit")),
+    register("daily-notes.sync", async () => {
+      await notebookGit.run("sync");
+      void vscode.window.showInformationMessage("Daily Notes sync complete.");
+    }),
+    register("daily-notes.toggleAutoCommit", () => toggleSetting("autoCommit")),
+    register("daily-notes.resetAutoCommitInterval", resetAutoCommitInterval),
+    register("daily-notes.toggleautoSync", () => toggleSetting("autoSync"))
+  );
+  configure();
+}
 
 function insertTimestamp() {
   const editor = vscode.window.activeTextEditor;
@@ -224,14 +97,11 @@ function insertTimestamp() {
   }
 }
 
-// This method is called when your extension is deactivated
-export function deactivate() {}
-
 // The entry of the extension.
 async function openTodaysDailyNote() {
   Logger.info("openTodaysDailyNote");
 
-  if (utils.isValidNotebookPath(configManager.get("notebookPath")) === false) {
+  if (!getNotebookFolder()) {
     Logger.warn("Notebook directory is not set.");
     // todo tianshihao, should it return by a boolean value?
     if (false === (await setUpNotebook())) {
@@ -483,70 +353,6 @@ async function openNotebookInNewWindow(notebookInfo: {
   return true;
 }
 
-function activateGitService() {
-  Logger.info("activateGitService");
-
-  gitService.init();
-
-  if (true === configManager.get("enableGit")) {
-    if (true === configManager.get("autoCommit")) {
-      if (true === configManager.get("autoSync")) {
-        gitService.sync();
-      }
-
-      gitService.scheduleAutoCommit();
-    }
-  }
-
-  statusBarWidgetManager
-    .getWidget("enableGit")
-    .updateContent(`Git: ${configManager.get("enableGit") ? "On" : "Off"}`);
-  statusBarWidgetManager
-    .getWidget("autoCommit")
-    .updateContent(
-      `Auto Commit: ${configManager.get("autoCommit") ? "On" : "Off"}`
-    );
-  statusBarWidgetManager
-    .getWidget("autoSync")
-    .updateContent(
-      `Auto Sync: ${configManager.get("autoSync") ? "On" : "Off"}`
-    );
-}
-
-function disableGitService() {
-  Logger.info("disableGitService");
-
-  configManager.update(
-    "autoCommit",
-    false,
-    vscode.ConfigurationTarget.Workspace
-  );
-
-  configManager.update("autoSync", false, vscode.ConfigurationTarget.Workspace);
-
-  // todo tianshihao, how to make the widget auto response to the change of configuration?
-  statusBarWidgetManager.getWidget("enableGit").updateContent("Git: Off");
-  statusBarWidgetManager
-    .getWidget("autoCommit")
-    .updateContent("Auto Commit: Off");
-}
-
-async function commit() {
-  Logger.info("commit");
-
-  await gitService.commit();
-  if (true === configManager.get("autoSync")) {
-    await gitService.sync();
-  }
-}
-
-async function sync() {
-  Logger.info("sync");
-
-  await gitService.commit();
-  await gitService.sync();
-}
-
 function updateTextState(activeEditor: vscode.TextEditor) {
   Logger.info("updateTextState");
 
@@ -566,235 +372,34 @@ function updateTextState(activeEditor: vscode.TextEditor) {
     );
 }
 
-function toggleEnableGit() {
-  Logger.info("toggleEnableGit");
-
-  configManager.update(
-    "enableGit",
-    !configManager.get("enableGit"),
-    vscode.ConfigurationTarget.Workspace
-  );
+async function toggleEnableGit() {
+  const target = vscode.ConfigurationTarget.Workspace;
+  const enable = !configManager.get("enableGit");
+  if (!enable) {
+    await configManager.update("enableGit", false, target);
+  }
+  await configManager.update("autoSync", false, target);
+  await configManager.update("autoCommit", enable, target);
+  if (enable) {
+    await configManager.update("enableGit", true, target);
+  }
 }
 
-function toggleAutoCommit() {
-  Logger.info("toggleAutoCommit");
-
-  configManager.update(
-    "autoCommit",
-    !configManager.get("autoCommit"),
-    vscode.ConfigurationTarget.Workspace
-  );
+function toggleSetting(key: "autoCommit" | "autoSync") {
+  return configManager.update(key, !configManager.get(key), vscode.ConfigurationTarget.Workspace);
 }
 
 async function resetAutoCommitInterval() {
-  Logger.info("resetAutoCommitInterval");
-
-  let isValid = false;
-  let interval;
-
-  while (!isValid) {
-    interval = await vscode.window.showInputBox({
-      prompt: "Enter the new interval for auto commit in minutes",
-      validateInput: (text) => {
-        const value = parseInt(text, 10);
-        if (false === utils.isValidAutoCommitInterval(value)) {
-          return "please enter a value between 2 and 600.";
-        }
-        return null;
-      },
-    });
-
-    if (interval !== undefined) {
-      isValid = true;
-      // Update the configuration with the new interval
-      // Assuming configManager is a placeholder for your actual configuration management logic
-      configManager.update(
-        "autoCommitInterval",
-        parseInt(interval, 10),
-        vscode.ConfigurationTarget.Workspace
-      );
-    } else {
-      // User pressed ESC or closed the input box, break the loop
-      break;
-    }
-  }
-}
-
-function toggleautoSync() {
-  Logger.info("toggleautoSync");
-
-  configManager.update(
-    "autoSync",
-    !configManager.get("autoSync"),
-    vscode.ConfigurationTarget.Workspace
-  );
-}
-
-// This function is modified to monitor changes in the active editor only
-function monitorActiveEditorChanges(context: vscode.ExtensionContext) {
-  Logger.info("monitorActiveEditorChanges");
-
-  // Immediately perform a word count if there's an active editor when the extension is activated
-  const activeEditor = vscode.window.activeTextEditor;
-  if (activeEditor) {
-    // 1. Check whether the active editor is under the notebook directory.
-    if (true === utils.isFileInNotebookPath(activeEditor)) {
-      // 2. If so update the text state.
-      updateTextState(activeEditor);
-      statusBarWidgetManager.showAll();
-    } else {
-      statusBarWidgetManager.hideAll();
-    }
-  }
-
-  // Monitor changes in the active editor and perform a word count on change
-  vscode.window.onDidChangeActiveTextEditor(
-    (editor) => {
-      if (editor) {
-        // 1. Check whether the active editor is under the notebook directory.
-        if (true === utils.isFileInNotebookPath(editor)) {
-          // 2. If so update the text state.
-          updateTextState(editor);
-          statusBarWidgetManager.showAll();
-        } else {
-          statusBarWidgetManager.hideAll();
-        }
-      }
+  const interval = await vscode.window.showInputBox({
+    prompt: "Minutes between automatic commits",
+    value: String(configManager.get("autoCommitInterval")),
+    validateInput: (text) => {
+      const minutes = Number(text);
+      return isValidCommitInterval(minutes)
+        ? undefined : "Enter a whole number between 2 and 600.";
     },
-    null,
-    context.subscriptions
-  );
-
-  vscode.workspace.onDidChangeTextDocument(
-    (event) => {
-      if (
-        vscode.window.activeTextEditor &&
-        event.document === vscode.window.activeTextEditor.document
-      ) {
-        updateTextState(vscode.window.activeTextEditor);
-      }
-    },
-    null,
-    context.subscriptions
-  );
-}
-
-// function handleActiveEditorChange(editor: vscode.TextEditor | undefined) {
-//   if (editor) {
-//     console.log(`Active editor changed: ${editor.document.uri.fsPath}`);
-//     // Add your logic here
-//   }
-// }
-
-// function toggleActiveEditorChangeListener() {
-//   if (Context.getInstance().getIsActiveEditorChangeListenerEnabled()) {
-//     // Unregister the listener
-//     if (Context.getInstance().getActiveEditorChangeListener()) {
-//       Context.getInstance().getActiveEditorChangeListener()?.dispose();
-//       Context.getInstance().setActiveEditorChangeListener(undefined);
-//     }
-//     vscode.window.showInformationMessage(
-//       "Active editor change listener disabled."
-//     );
-//   } else {
-//     // Register the listener
-//     Context.getInstance().setActiveEditorChangeListener(
-//       vscode.window.onDidChangeActiveTextEditor(handleActiveEditorChange)
-//     );
-//     vscode.window.showInformationMessage(
-//       "Active editor change listener enabled."
-//     );
-//   }
-//   Context.getInstance().setIsActiveEditorChangeListenerEnabled(
-//     !Context.getInstance().getIsActiveEditorChangeListenerEnabled()
-//   );
-// }
-
-// This function also repsonds to changes of workspace folders.
-function monitorConfigurationChanges(context: vscode.ExtensionContext) {
-  Logger.info("monitorConfigurationChanges");
-
-  vscode.workspace.onDidChangeConfiguration((event) => {
-    // Will respond to changes in the dailyNotes configuration, even if the dailyNotes.fuck!
-    if (event.affectsConfiguration("dailyNotes")) {
-      Logger.info("dailyNotes configuration changed.");
-
-      if (event.affectsConfiguration("dailyNotes.notebookPath")) {
-        setUp(context);
-      }
-
-      if (event.affectsConfiguration("dailyNotes.enableGit")) {
-        if (true === configManager.get("enableGit")) {
-          activateGitService();
-        } else {
-          disableGitService();
-        }
-
-        if (true === configManager.get("enableGit")) {
-          configManager.update(
-            "autoCommit",
-            true,
-            vscode.ConfigurationTarget.Workspace
-          );
-        } else {
-          configManager.update(
-            "autoCommit",
-            false,
-            vscode.ConfigurationTarget.Workspace
-          );
-        }
-
-        configManager.update(
-          "autoSync",
-          false,
-          vscode.ConfigurationTarget.Workspace
-        );
-      }
-
-      if (event.affectsConfiguration("dailyNotes.autoCommit")) {
-        if (true === configManager.get("enableGit")) {
-          if (true === configManager.get("autoCommit")) {
-            gitService.scheduleAutoCommit();
-          } else {
-            gitService.stopAutoCommit();
-          }
-
-          statusBarWidgetManager
-            .getWidget("autoCommit")
-            .updateContent(
-              `Auto Commit: ${configManager.get("autoCommit") ? "On" : "Off"}`
-            );
-        } else {
-          // do nothing
-        }
-      }
-
-      if (event.affectsConfiguration("dailyNotes.autoCommitInterval")) {
-        if (true === configManager.get("enableGit")) {
-          if (true === configManager.get("autoCommit")) {
-            gitService.scheduleAutoCommit();
-          }
-        }
-      }
-
-      if (event.affectsConfiguration("dailyNotes.autoSync")) {
-        if (true === configManager.get("enableGit")) {
-          statusBarWidgetManager
-            .getWidget("autoSync")
-            .updateContent(
-              `Auto Sync: ${configManager.get("autoSync") ? "On" : "Off"}`
-            );
-        }
-      }
-    }
   });
-}
-
-// This function only responds to changes in workspace folders.
-function monitorWorkspaceChanges(context: vscode.ExtensionContext) {
-  Logger.info("monitorWorkspaceChanges");
-
-  vscode.workspace.onDidChangeWorkspaceFolders((event) => {
-    setUp(context);
-  });
+  if (interval !== undefined) {
+    await configManager.update("autoCommitInterval", Number(interval), vscode.ConfigurationTarget.Workspace);
+  }
 }

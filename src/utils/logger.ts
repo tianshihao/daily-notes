@@ -3,8 +3,9 @@ import { LogOutputChannel, window } from "vscode";
 export class Logger {
   private static output: LogOutputChannel;
 
-  public static init(): void {
+  public static init(): LogOutputChannel {
     Logger.output = window.createOutputChannel("Daily Notes", { log: true });
+    return Logger.output;
   }
 
   public static error(msg: string): void {

@@ -10,7 +10,7 @@ Open today's Markdown note in VS Code with a single command. Run it again later 
 | Timestamps | Insert the current local date and time at the cursor. |
 | Writing statistics | See the word count and detected language in the status bar as you type. |
 | Git history | Commit notebook changes manually or on a schedule you choose. |
-| Remote sync | Pull from and push to `origin/master` on demand or automatically after a commit. |
+| Remote sync | Sync the current branch with its configured upstream on demand or after a commit. |
 
 ## Write your first note
 
@@ -24,10 +24,10 @@ If setup prompts again, open the notebook folder itself in VS Code. In **Workspa
 
 ## Optional Git sync
 
-For local history, initialize Git in the notebook folder or use an existing repository. After setting or changing the notebook path, reload the VS Code window so the Git service picks up the folder. Run **Daily Notes: Toggle Enable Git** to enable Git. Turning it on also enables automatic commits and turns off automatic sync.
+Use an existing Git repository or initialize one in the notebook folder. Run **Daily Notes: Toggle Enable Git** to enable Git, start automatic commits, and leave automatic sync off. Switching notebooks in the same window also switches the repository used by these commands.
 
-- **Daily Notes: Commit** saves modified notebook documents that are open in VS Code, runs `git add .` from the notebook folder, and commits the staged changes. This can include files other than today's note.
-- **Daily Notes: Sync** first attempts a local commit, then fetches, pulls changes if needed, and pushes when the branch is ahead. Sync uses **`origin/master`**. To use it, work on a local `master` branch that tracks an existing `origin/master` and has push access.
+- **Daily Notes: Commit** saves open, modified documents under the notebook folder and commits changes within it, including new and deleted files. Files already staged elsewhere in the same repository stay staged.
+- **Daily Notes: Sync** first commits notebook changes locally, then fetches the checked-out branch's upstream (for example, `origin/main`). It fast-forwards a branch that is behind or pushes one that is ahead. If both sides have new commits, it stops so you can reconcile them in Git. Sync applies to the whole branch, including any earlier local commits. Use `git branch -vv` to see which upstream your branch tracks.
 - Use **Daily Notes: Toggle Auto Commit** to switch between manual and scheduled commits, and **Daily Notes: Toggle Auto Sync** to sync after commits.
 
 ## Settings

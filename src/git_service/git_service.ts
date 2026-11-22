@@ -1,203 +1,127 @@
-import { configManager } from "../config_manager/config_manager";
-import { Logger } from "../utils/logger";
-import { simpleGit, SimpleGit, StatusResult } from "simple-git";
-import { utils } from "../utils/utils";
-import * as fs from "fs";
-import * as vscode from "vscode";
-import path from "path";
+import { lstat, readdir } from "node:fs/promises";
+import { join } from "node:path";
+import { simpleGit, type SimpleGit } from "simple-git";
 
-class GitService {
-  private static instance?: GitService = undefined;
-  private gitP?: SimpleGit = undefined;
-  private autoCommitIntervalId?: NodeJS.Timeout = undefined;
+export class GitService {
+  private queue = Promise.resolve();
+  private readonly lifetime = new AbortController();
 
-  private constructor() {
-    const notebookPath = configManager.get("notebookPath");
+  constructor(
+    private readonly notebookPath: string,
+    private readonly savePendingEdits?: (signal: AbortSignal) => Promise<void>
+  ) {}
 
-    if (notebookPath) {
-      this.gitP = simpleGit(notebookPath);
-    } else {
-      this.gitP = undefined;
+  commit(message: string): Promise<void> {
+    return this.run((git) => this.commitNotebook(git, message));
+  }
+
+  sync(message: string): Promise<void> {
+    return this.run(async (git) => {
+      const name = (await git.raw("branch", "--show-current")).trim();
+      if (!name) {
+        throw new Error("Check out a local branch before syncing the notebook.");
+      }
+      const branch = `refs/heads/${name}`;
+      await this.commitNotebook(git, message);
+      const tracking = await git.raw(
+        "for-each-ref",
+        "--format=%(upstream)%00%(upstream:remotename)%00%(upstream:remoteref)",
+        branch
+      );
+      const [upstream, remote, remoteRef] = tracking.trimEnd().split("\0");
+      if (!upstream || !remote || !remoteRef?.startsWith("refs/heads/")) {
+        throw new Error("Set an upstream branch for the current notebook branch before syncing.");
+      }
+
+      this.lifetime.signal.throwIfAborted();
+      await git.raw("fetch", "--no-tags", "--", remote, remoteRef);
+      const remoteTip = (await git.raw("rev-parse", "--verify", upstream)).trim();
+      const counts = await git.raw("rev-list", "--left-right", "--count", `${branch}...${remoteTip}`);
+      const [ahead, behind] = counts.trim().split(/\s+/).map(Number);
+      if (ahead && behind) {
+        throw new Error("The notebook branch and its upstream have diverged. Reconcile them in Git before syncing.");
+      }
+
+      const currentBranch = (await git.raw("symbolic-ref", "--quiet", "HEAD")).trim();
+      if (currentBranch !== branch) {
+        throw new Error("The current notebook branch changed during sync.");
+      }
+      this.lifetime.signal.throwIfAborted();
+      if (behind) {
+        await git.raw("merge", "--ff-only", "--no-autostash", remoteTip);
+      } else if (ahead) {
+        await git.raw("push", "--", remote, `${branch}:${remoteRef}`);
+      }
+    });
+  }
+
+  dispose(): void {
+    this.lifetime.abort(new Error("The notebook Git service is no longer active."));
+  }
+
+  private run(operation: (git: SimpleGit) => Promise<void>): Promise<void> {
+    const result = this.queue.then(async () => {
+      this.lifetime.signal.throwIfAborted();
+      const git = simpleGit(this.notebookPath);
+      const gitDir = (await git.raw("rev-parse", "--absolute-git-dir")).trimEnd();
+      const files = await readdir(gitDir);
+      const busy = ["MERGE_HEAD", "CHERRY_PICK_HEAD", "REVERT_HEAD", "rebase-merge", "rebase-apply", "sequencer"];
+      const hasConflicts = await git.raw("ls-files", "--unmerged", "-z", "--", ":/");
+      if (busy.some((name) => files.includes(name)) || hasConflicts) {
+        throw new Error("Finish the current Git operation and resolve conflicts before committing or syncing notes.");
+      }
+      this.lifetime.signal.throwIfAborted();
+      // Save inside the queue so an editor write cannot overlap a previous sync.
+      await this.savePendingEdits?.(this.lifetime.signal);
+      this.lifetime.signal.throwIfAborted();
+      await operation(git);
+    });
+    // A failed command rejects its caller but does not block later commands.
+    this.queue = result.catch(() => {});
+    return result;
+  }
+
+  private async commitNotebook(git: SimpleGit, message: string): Promise<void> {
+    const changes = await git.raw("status", "--porcelain=v1", "-z", "--untracked-files=all", "--", ".");
+    if (!changes) {
+      return;
+    }
+    this.lifetime.signal.throwIfAborted();
+    await git.raw("add", "-A", "--", ".");
+    if (await git.raw("diff", "--cached", "--name-only", "-z", "--", ".")) {
+      await this.checkStagedDeletions(git);
+      this.lifetime.signal.throwIfAborted();
+      // --only leaves staged files outside a nested notebook in the index.
+      await git.raw("commit", "--only", "-m", message, "--", ".");
     }
   }
 
-  static getInstance(): GitService {
-    if (!GitService.instance) {
-      GitService.instance = new GitService();
-    }
-
-    return GitService.instance;
-  }
-
-  async init(): Promise<void> {
-    vscode.window.showInformationMessage("Initializing git repository...");
-
-    if (this.gitP) {
+  private async checkStagedDeletions(git: SimpleGit): Promise<void> {
+    // A path-limited commit reads the worktree. An ignored file can still be on
+    // disk after git rm --cached, even though the index records a deletion.
+    const output = await git.raw(
+      "diff", "--cached", "--diff-filter=D", "--no-renames", "--name-only",
+      "--relative", "-z", "--", "."
+    );
+    for (const name of output.split("\0").filter(Boolean)) {
+      const file = join(this.notebookPath, name);
       try {
-        const gitDirectory = await this.gitP.revparse(["--show-toplevel"]);
-
-        if (fs.existsSync(path.join(gitDirectory, ".git"))) {
-          Logger.warn("Git repository already exists.");
-        } else {
-          await this.gitP.init();
-          Logger.info("Git repository initialized.");
+        if ((await lstat(file)).isDirectory()) {
+          // A file replaced by an ordinary directory can be committed safely.
+          // A retained submodule directory can instead be staged as a gitlink.
+          await lstat(join(file, ".git"));
         }
-      } catch (err) {
-        vscode.window.showErrorMessage("Failed to initialize git repository.");
-        Logger.error("Error during git initialization: " + err);
+      } catch (error) {
+        const code = (error as NodeJS.ErrnoException).code;
+        if (code === "ENOENT" || code === "ENOTDIR") {
+          continue;
+        }
+        throw error;
       }
-    }
-  }
-
-  async checkIfWorkingDirectoryIsClean(
-    statusResult: StatusResult
-  ): Promise<boolean> {
-    return statusResult.isClean();
-  }
-
-  async commit(): Promise<void> {
-    Logger.info("Checking for changes to commit...");
-
-    // Get commit message from configManager
-    const commitMessage =
-      configManager.get("commitMessage") || "Auto commited by Daily Notes";
-
-    // Append the timestamp to the commit message
-    const commitMessageWithDate = `${commitMessage} at ${utils.getTimestamp()}`;
-
-    if (this.gitP) {
-      try {
-        const notebookPath = configManager.get("notebookPath");
-
-        // todo tianshihao, will this include files in subdirectories?
-        for (const doc of vscode.workspace.textDocuments) {
-          if (doc.fileName.startsWith(notebookPath) && doc.isDirty) {
-            await doc.save();
-          }
-        }
-
-        // Check if there are any uncommitted changes
-        const status = await this.gitP.status();
-
-        if ((await this.checkIfWorkingDirectoryIsClean(status)) === false) {
-          Logger.info("Staging changes...");
-
-          // Stage all changes
-          await this.gitP.add(".");
-
-          // Commit the staged changes
-          await this.gitP.commit(commitMessageWithDate);
-
-          Logger.info("Changes committed.");
-        } else {
-          Logger.info("No changes to commit.");
-        }
-      } catch (err) {
-        vscode.window.showErrorMessage("Failed to commit changes: " + err);
-        Logger.error("Error during commit: " + err);
-      }
-    }
-
-    if (true === configManager.get("autoSync")) {
-      await this.sync();
-    }
-  }
-
-  public scheduleAutoCommit() {
-    // min to ms.
-    const autoCommitInterval =
-      configManager.get("autoCommitInterval") * 60 * 1000;
-    const notebookPath = configManager.get("notebookPath");
-
-    // todo tianshihao, move the check of auto commit interval to the utils.
-    if (notebookPath && !isNaN(autoCommitInterval)) {
-      if (this.autoCommitIntervalId) {
-        clearInterval(this.autoCommitIntervalId);
-      }
-
-      setTimeout(async () => {
-        this.autoCommitIntervalId = setInterval(async () => {
-          try {
-            console.log("Auto commit...", utils.getTimestamp());
-            await this.commit();
-          } catch (err) {
-            console.error("Error during auto commit:", err);
-          }
-        }, autoCommitInterval);
-      }, autoCommitInterval);
-    }
-  }
-
-  public stopAutoCommit() {
-    if (this.autoCommitIntervalId) {
-      clearInterval(this.autoCommitIntervalId);
-    }
-  }
-
-  // todo tianshihao, the sync takes too long, could be optimized.
-  async sync(): Promise<void> {
-    Logger.info("Syncing changes...");
-
-    if (this.gitP) {
-      const remotes = await this.gitP.getRemotes(false);
-      if (remotes.length === 0) {
-        vscode.window.showErrorMessage("No remote repository found.");
-        Logger.error("No remote repository found.");
-      }
-
-      try {
-        // Check the status of the repository
-        const status = await this.gitP.status();
-
-        // Check if there are any uncommitted changes
-        if ((await this.checkIfWorkingDirectoryIsClean(status)) === false) {
-          await this.gitP.add(".");
-
-          // Append the timestamp to the stash message
-          const stashMessage = `Stashed by Daily Notes at ${utils.getTimestamp()}`;
-
-          // Stash any local changes with a message
-          vscode.window.showInformationMessage("Stashing local changes...");
-          await this.gitP.stash(["save", stashMessage]);
-        }
-
-        // Check if there are any new commits in the remote repository
-        const local = await this.gitP.revparse(["HEAD"]);
-        await this.gitP.fetch();
-        const remoteHead = await this.gitP.revparse(["origin/master"]);
-
-        if (local !== remoteHead) {
-          // Pull the changes from the 'master' branch of the 'origin' remote repository
-          Logger.info("Pulling changes...");
-          await this.gitP.pull(
-            "origin",
-            "master" /* , { "--rebase": "true" } */
-          );
-        }
-
-        // If there were any stashed changes, apply them
-        if ((await this.checkIfWorkingDirectoryIsClean(status)) === false) {
-          Logger.info("Applying stashed changes...");
-          await this.gitP.stash(["pop"]);
-        }
-
-        // Check the status of the repository again
-        const statusAfterPull = await this.gitP.status();
-
-        // Check if there are any new commits that need to be pushed
-        if (statusAfterPull.ahead > 0) {
-          // Push the local changes to the 'master' branch of the 'origin' remote repository
-          Logger.info("Pushing changes...");
-          await this.gitP.push("origin", "master");
-        }
-
-        vscode.window.showInformationMessage("Changes synced successfully.");
-      } catch (err) {
-        vscode.window.showErrorMessage("Failed to sync changes: " + err);
-        Logger.error("Error during sync: " + err);
-      }
+      throw new Error(
+        `"${name}" is staged for deletion but still exists on disk. Review the staged changes ` +
+        "and commit the deletion in Git before retrying the notebook command."
+      );
     }
   }
 }
-
-export const gitService = GitService.getInstance();
