@@ -87,6 +87,17 @@ export function activate(context: vscode.ExtensionContext) {
       await git.sync();
       void vscode.window.showInformationMessage("Daily Notes sync complete.");
     }),
+    register("daily-notes.syncAndQuit", async () => {
+      try {
+        await git.sync();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        Logger.error(`Sync and Quit failed: ${message}`);
+        void vscode.window.showErrorMessage(`Daily Notes could not sync. VS Code will stay open. ${message}`);
+        return;
+      }
+      await vscode.commands.executeCommand("workbench.action.quit");
+    }),
     register("daily-notes.toggleAutoCommit", () => toggleSetting("autoCommit")),
     register("daily-notes.resetAutoCommitInterval", resetAutoCommitInterval),
     register("daily-notes.toggleautoSync", () => toggleSetting("autoSync"))
