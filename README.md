@@ -83,4 +83,12 @@ The extension code lives in `src/` and its test suites and fixtures live in `tes
 
 After staging a change, run `npm exec -- cz` to create a commit. The `npm ci` step installs Commitizen and the repository's emoji adapter.
 
+## Publishing
+
+Update the changelog and run `npm version patch --no-git-tag-version` to update both version files. Use Commitizen to commit `CHANGELOG.md`, `package.json`, and `package-lock.json` together. Tag that commit with the version from `package.json` (for example, `0.0.12`) and push the branch and tag.
+
+The [Marketplace workflow](.github/workflows/publish.yml) tests the tagged source, saves the VSIX as a workflow artifact, and publishes that file through Marketplace Trusted Publishing. To publish an existing tag, open the workflow in GitHub Actions, select **Run workflow** on `master`, and enter the version tag.
+
+The [Marketplace publisher](https://marketplace.visualstudio.com/manage/publishers/tianshihao) needs a Trusted Publishing policy for owner `tianshihao`, repository `daily-notes`, and workflow `publish.yml`. Leave the environment field empty.
+
 See the [roadmap](ROADMAP.md) for planned features or [open an issue](https://github.com/tianshihao/daily-notes/issues) to report a problem.

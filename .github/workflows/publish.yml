@@ -1,0 +1,79 @@
+name: Publish to VS Code Marketplace
+
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Existing release tag, for example 0.0.11
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: marketplace-${{ inputs.version || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.event_name == 'push' || github.ref == 'refs/heads/master'
+    runs-on: macos-latest
+    steps:
+      - name: Validate release tag
+        env:
+          VERSION: ${{ inputs.version || github.ref_name }}
+        run: |
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Expected a release tag in X.Y.Z format."
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ inputs.version || github.ref_name }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Check package version
+        env:
+          VERSION: ${{ inputs.version || github.ref_name }}
+        run: |
+          node -e 'if (require("./package.json").version !== process.env.VERSION) throw Error("The release tag must match package.json")'
+      - run: npm ci
+      - run: npm test
+      - name: Package the extension
+        env:
+          VERSION: ${{ inputs.version || github.ref_name }}
+        run: |
+          npx --yes @vscode/vsce@4.1.1 package --no-dependencies \
+            --baseContentUrl "https://github.com/${GITHUB_REPOSITORY}/blob/${VERSION}" \
+            --baseImagesUrl "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${VERSION}" \
+            --out "dist/daily-notes-${VERSION}.vsix"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: daily-notes-${{ inputs.version || github.ref_name }}
+          path: dist/*.vsix
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/download-artifact@v4
+        with:
+          name: daily-notes-${{ inputs.version || github.ref_name }}
+      - name: Publish the tested VSIX
+        env:
+          VERSION: ${{ inputs.version || github.ref_name }}
+        run: npx --yes @vscode/vsce@4.1.1 publish --oidc --packagePath "daily-notes-${VERSION}.vsix"
