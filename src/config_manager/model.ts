@@ -1,8 +1,11 @@
+import type { NotePeriod } from "../notes/period";
+
 /**
  * Represents a map of configuration key types.
  */
 export interface IConfigurationKeyTypeMap {
   notebookPath: string;
+  templates: Partial<Record<NotePeriod, string>>;
   notebookName: string;
   showDocumentStats: boolean;
   showGitStatus: boolean;

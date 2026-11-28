@@ -20,7 +20,7 @@ suite("Git service", function () {
   setup(() => {
     directory = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "daily-notes-service-")));
     settings = {
-      notebookName: "", notebookPath: "", showDocumentStats: true, showGitStatus: true, enableGit: true, autoCommit: false,
+      notebookName: "", notebookPath: "", templates: {}, showDocumentStats: true, showGitStatus: true, enableGit: true, autoCommit: false,
       autoCommitInterval: 10, autoSync: false, commitMessage: "Save note",
     };
     configManager.get = (key) => settings[key];

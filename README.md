@@ -38,6 +38,34 @@ From a dated note in the notebook root, use **Daily Notes: Previous Daily Note**
 
 If setup prompts again, open the notebook folder itself in VS Code. In **Workspace Settings**, set `dailyNotes.notebookPath` to its full path. The path must match one of the folders open at the root of the workspace.
 
+## Note templates
+
+Run **Daily Notes: Open Note Template** and choose a period. The first time you choose a period, Daily Notes creates a Markdown template with the default heading and adds only that period to `dailyNotes.templates` in Workspace Settings. Run the command again to open the template for editing.
+
+For example, choosing **Day** creates `templates/day.md` and adds this setting:
+
+```json
+{
+  "dailyNotes.templates": {
+    "day": "templates/day.md"
+  }
+}
+```
+
+Template paths are relative to the notebook root. There is one template per period, and periods without a configured template use their default heading. Changes to a template apply when creating a note.
+
+Invalid template paths and unknown placeholders prevent note creation. See the **Daily Notes** channel in the VS Code **Output** panel for details.
+
+| Placeholder | Meaning |
+| --- | --- |
+| `{date:full}`, `{date:end}` | First and last dates of the period, such as `2026-11-23` and `2026-11-29` for a weekly note |
+| `{date:month}`, `{date:quarter}`, `{date:year}` | Calendar formats for the first date, such as `2026-11`, `2026 Q4`, and `2026` |
+| `{date:weekday}` | Short weekday of the first date, such as `Mon` |
+| `{week:iso}`, `{week:number}` | ISO week of the first date, such as `W48` or `48` |
+| `{month:number}`, `{quarter:label}` | Month number or quarter label, such as `11` or `Q4` |
+
+Earlier placeholders such as `{date}`, `{week}`, and `{year}` still work. The generated yearly template uses `# {date:year}`.
+
 ## Status bar
 
 The Daily Notes status bar appears only for Markdown (`.md`) files in the configured notebook folder or its subfolders. It shows **Document Stats** followed by **Git Status** in one entry. If you set `dailyNotes.notebookName`, the name appears before the first visible component, for example `Journal  |  Git: Off`.

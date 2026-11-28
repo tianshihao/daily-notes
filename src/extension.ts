@@ -1,3 +1,4 @@
+import { createNoteContent, openNoteTemplate } from "./notes/templates";
 import { setUpNotebook } from "./notes/notebook_setup";
 import { getNotePeriod, type NotePeriod } from "./notes/period";
 import { configManager } from "./config_manager/config_manager";
@@ -70,6 +71,12 @@ export function activate(context: vscode.ExtensionContext) {
     register("daily-notes.nextDailyNote", () => navigateDailyNote("next")),
     register("daily-notes.openSameDayLastYear", () => navigateDailyNote("lastYear")),
     register("daily-notes.setUpNotebook", setUpNotebook),
+    register("daily-notes.openNoteTemplate", () => runNoteCommand(async () => {
+      const root = await getNotebookPath();
+      if (root) {
+        await openNoteTemplate(root);
+      }
+    }, "open the note template")),
     register("daily-notes.insertTimestamp", insertTimestamp),
     register("daily-notes.showStatusBarActions", showStatusBarActions),
     register("daily-notes.toggleDocumentStats", () => toggleStatusVisibility("showDocumentStats")),
@@ -132,7 +139,7 @@ async function openCurrentNote(period: NotePeriod) {
   await runNoteCommand(async () => {
     const notebookPath = await getNotebookPath();
     if (notebookPath) {
-      await openOrCreateNote(notebookPath, note.filename, `# ${note.heading}\n`);
+      await openOrCreateNote(notebookPath, note.filename, () => createNoteContent(notebookPath, period, note.variables));
     }
   });
 }
@@ -146,7 +153,7 @@ async function listDailyNotes(notebookPath: string): Promise<string[]> {
     .sort();
 }
 
-async function openOrCreateNote(notebookPath: string, filename: string, content: string) {
+async function openOrCreateNote(notebookPath: string, filename: string, createContent: () => Promise<string>) {
   const filePath = path.join(notebookPath, filename);
   try {
     await fs.promises.stat(filePath);
@@ -155,7 +162,7 @@ async function openOrCreateNote(notebookPath: string, filename: string, content:
       throw error;
     }
     try {
-      await fs.promises.writeFile(filePath, content, { flag: "wx" });
+      await fs.promises.writeFile(filePath, await createContent(), { flag: "wx" });
     } catch (writeError) {
       if ((writeError as NodeJS.ErrnoException).code !== "EEXIST") {
         throw writeError;
@@ -230,12 +237,12 @@ async function showNote(filePath: string) {
   await vscode.window.showTextDocument(document);
 }
 
-async function runNoteCommand(action: () => Promise<void>) {
+async function runNoteCommand(action: () => Promise<void>, operation = "open the daily note") {
   try {
     await action();
   } catch (error) {
     Logger.error(String(error));
-    void vscode.window.showErrorMessage(`Could not open the daily note. ${String(error)}`);
+    void vscode.window.showErrorMessage(`Could not ${operation}. ${String(error)}`);
   }
 }
 

@@ -78,6 +78,11 @@
         "category": "Daily Notes"
       },
       {
+        "command": "daily-notes.openNoteTemplate",
+        "title": "Open Note Template",
+        "category": "Daily Notes"
+      },
+      {
         "command": "daily-notes.setUpNotebook",
         "title": "Setup Notebook",
         "category": "Daily Notes"
@@ -139,6 +144,19 @@
     "configuration": {
       "title": "Daily Notes",
       "properties": {
+        "dailyNotes.templates": {
+          "type": "object",
+          "default": {},
+          "additionalProperties": false,
+          "properties": {
+            "day": { "type": "string" },
+            "week": { "type": "string" },
+            "month": { "type": "string" },
+            "quarter": { "type": "string" },
+            "year": { "type": "string" }
+          },
+          "description": "Markdown template paths relative to the notebook folder, one for each note period."
+        },
         "dailyNotes.notebookName": {
           "type": "string",
           "default": "",
