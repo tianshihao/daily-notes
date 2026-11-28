@@ -34,7 +34,7 @@ The filename starts with the local calendar date on which the period begins. Wee
 
 Use **Daily Notes: Insert Timestamp** to mark an entry.
 
-From a dated note in the notebook root, use **Daily Notes: Previous Daily Note** or **Daily Notes: Next Daily Note** to jump between existing notes by date. Both commands skip days without notes.
+From a dated note in the notebook root, use **Daily Notes: Previous Daily Note** or **Daily Notes: Next Daily Note** to jump between existing notes by date. Both commands skip days without notes. Use **Daily Notes: Open Same Day Last Year** to open the existing daily note for the same month and day in the previous year.
 
 If setup prompts again, open the notebook folder itself in VS Code. In **Workspace Settings**, set `dailyNotes.notebookPath` to its full path. The path must match one of the folders open at the root of the workspace.
 

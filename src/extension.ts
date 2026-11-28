@@ -66,8 +66,9 @@ export function activate(context: vscode.ExtensionContext) {
     register("daily-notes.openThisMonthsMonthlyNote", () => openCurrentNote("month")),
     register("daily-notes.openThisQuartersQuarterlyNote", () => openCurrentNote("quarter")),
     register("daily-notes.openThisYearsYearlyNote", () => openCurrentNote("year")),
-    register("daily-notes.previousDailyNote", () => openAdjacentNote("previous")),
-    register("daily-notes.nextDailyNote", () => openAdjacentNote("next")),
+    register("daily-notes.previousDailyNote", () => navigateDailyNote("previous")),
+    register("daily-notes.nextDailyNote", () => navigateDailyNote("next")),
+    register("daily-notes.openSameDayLastYear", () => navigateDailyNote("lastYear")),
     register("daily-notes.setUpNotebook", setUpNotebook),
     register("daily-notes.insertTimestamp", insertTimestamp),
     register("daily-notes.toggleDocumentStats", () => toggleStatusVisibility("showDocumentStats")),
@@ -175,7 +176,7 @@ async function openOrCreateNote(notebookPath: string, filename: string, content:
   await showNote(filePath);
 }
 
-async function openAdjacentNote(direction: "previous" | "next") {
+async function navigateDailyNote(direction: "previous" | "next" | "lastYear") {
   await runNoteCommand(async () => {
     const notebook = findWorkspaceDirectory(configManager.get("notebookPath"));
     const tabInput = vscode.window.tabGroups.activeTabGroup.activeTab?.input;
@@ -197,18 +198,37 @@ async function openAdjacentNote(direction: "previous" | "next") {
       void vscode.window.showInformationMessage("Open a daily note in the notebook folder first.");
       return;
     }
-    const dates = await listDailyNotes(notebook.uri.fsPath);
-    const adjacent = direction === "previous"
-      ? dates.reverse().find(candidate => candidate < date)
-      : dates.find(candidate => candidate > date);
-    if (inPreview) {
-      const target = adjacent ? vscode.Uri.joinPath(notebook.uri, adjacent + ".md") : document.uri;
-      await vscode.commands.executeCommand("markdown.showPreview", target);
-    } else if (adjacent) {
-      await showNote(path.join(notebook.uri.fsPath, adjacent + ".md"));
+    let target: vscode.Uri | undefined;
+    if (direction === "lastYear") {
+      const year = Number(date.slice(0, 4)) - 1;
+      const lastYear = String(year).padStart(4, "0") + date.slice(4);
+      if (parseNoteDate(lastYear)) {
+        const candidate = vscode.Uri.joinPath(notebook.uri, lastYear + ".md");
+        if (isMarkdownFileInDirectory(candidate, notebook.uri) &&
+            (await fs.promises.stat(candidate.fsPath)).isFile()) {
+          target = candidate;
+        }
+      }
+    } else {
+      const dates = await listDailyNotes(notebook.uri.fsPath);
+      const adjacent = direction === "previous"
+        ? dates.reverse().find(candidate => candidate < date)
+        : dates.find(candidate => candidate > date);
+      if (adjacent) {
+        target = vscode.Uri.joinPath(notebook.uri, adjacent + ".md");
+      }
     }
-    if (!adjacent) {
-      void vscode.window.showInformationMessage(`There is no ${direction} daily note.`);
+
+    if (inPreview) {
+      await vscode.commands.executeCommand("markdown.showPreview", target ?? document.uri);
+    } else if (target) {
+      await showNote(target.fsPath);
+    }
+    if (!target) {
+      const message = direction === "lastYear"
+        ? "There is no daily note for the same date last year."
+        : `There is no ${direction} daily note.`;
+      void vscode.window.showInformationMessage(message);
     }
   });
 }

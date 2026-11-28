@@ -73,6 +73,11 @@
         "category": "Daily Notes"
       },
       {
+        "command": "daily-notes.openSameDayLastYear",
+        "title": "Open Same Day Last Year",
+        "category": "Daily Notes"
+      },
+      {
         "command": "daily-notes.setUpNotebook",
         "title": "Setup Notebook",
         "category": "Daily Notes"

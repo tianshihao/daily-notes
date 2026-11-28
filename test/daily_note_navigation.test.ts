@@ -1,5 +1,5 @@
 import * as assert from "node:assert/strict";
-import { writeFile } from "node:fs/promises";
+import { access, unlink, writeFile } from "node:fs/promises";
 import * as vscode from "vscode";
 
 suite("Daily note navigation", function () {
@@ -88,5 +88,25 @@ suite("Daily note navigation", function () {
     await assertPreview("2026-11-03");
     await vscode.commands.executeCommand(next);
     await assertPreview("2026-11-03");
+  });
+
+  test("opens the same date last year and leaves missing notes absent", async () => {
+    const command = "daily-notes.openSameDayLastYear";
+    const folder = vscode.workspace.workspaceFolders![0].uri;
+    const existing = vscode.Uri.joinPath(folder, "2025-11-01.md");
+    const missing = vscode.Uri.joinPath(folder, "2025-11-03.md");
+    await writeFile(existing.fsPath, "# Last year\n", { flag: "wx" });
+    try {
+      await showSource(earlier);
+      await vscode.commands.executeCommand(command);
+      assert.equal(vscode.window.activeTextEditor?.document.uri.toString(), existing.toString());
+
+      await showSource(later);
+      await vscode.commands.executeCommand(command);
+      assert.equal(vscode.window.activeTextEditor?.document.uri.toString(), later.toString());
+      await assert.rejects(access(missing.fsPath), { code: "ENOENT" });
+    } finally {
+      await unlink(existing.fsPath);
+    }
   });
 });
