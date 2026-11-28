@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.0 (2026-11-28)
+
+- Open weekly, monthly, quarterly, and yearly notes by their period start date. Weekly filenames include the ISO week number.
+- Navigate between existing notes of the same period in source or Markdown preview.
+- Open the existing daily note for the same date last year, including from Markdown preview.
+- Create and edit a Markdown template for each note period with **Open Note Template**. Templates support date placeholders and report invalid paths or unknown placeholders in the Daily Notes output channel.
+- Click the status bar to toggle display and automation settings. The Git integration switch preserves automatic commit and sync preferences.
+- Require at least three minutes between automatic commits. Existing two-minute intervals run at three minutes.
+- Use **Sync and Quit** to exit VS Code after a successful notebook sync.
+- Save notebook settings before opening the notebook in another window, preserving existing settings and comments.
+
 ## 0.0.11 (2026-11-28)
 
 - Add Previous Daily Note and Next Daily Note commands that skip dates with no entry.
