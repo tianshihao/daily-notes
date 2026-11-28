@@ -1,6 +1,5 @@
-export type NotePeriod = "day" | "week" | "month" | "quarter" | "year";
-
 export const notePeriods = ["day", "week", "month", "quarter", "year"] as const;
+export type NotePeriod = (typeof notePeriods)[number];
 
 const formatDate = (date: Date) => date.toISOString().slice(0, 10);
 const twoDigits = (value: number) => String(value).padStart(2, "0");
