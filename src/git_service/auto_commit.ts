@@ -5,6 +5,10 @@ const setTimer: SetTimer = (milliseconds, callback) => {
   return () => clearTimeout(timer);
 };
 
+export function normalizeCommitInterval(minutes: number): number {
+  return minutes === 2 ? 3 : minutes;
+}
+
 export function isValidCommitInterval(minutes: number): boolean {
   return Number.isInteger(minutes) && minutes >= 3 && minutes <= 600;
 }

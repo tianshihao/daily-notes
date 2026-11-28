@@ -6,7 +6,7 @@ import { GitService } from "./git_service/git_service";
 import { Logger } from "./utils/logger";
 import { NotebookStatusBar, type NotebookStatusOptions } from "./widget/notebook_status_bar";
 import { findWorkspaceDirectory, isMarkdownFileInDirectory } from "./utils/filesystem";
-import { isValidCommitInterval } from "./git_service/auto_commit";
+import { isValidCommitInterval, normalizeCommitInterval } from "./git_service/auto_commit";
 import * as fs from "fs";
 import * as path from "path";
 import * as vscode from "vscode";
@@ -277,10 +277,10 @@ function toggleSetting(key: "enableGit" | "autoCommit" | "autoSync") {
 }
 
 async function resetAutoCommitInterval() {
-  const current = configManager.get("autoCommitInterval");
+  const current = normalizeCommitInterval(configManager.get("autoCommitInterval"));
   const interval = await vscode.window.showInputBox({
     prompt: "Minutes between automatic commits",
-    value: String(current === 2 ? 3 : current),
+    value: String(current),
     validateInput: (text) => {
       const minutes = Number(text);
       return isValidCommitInterval(minutes)

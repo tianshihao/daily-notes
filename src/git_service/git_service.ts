@@ -3,7 +3,7 @@ import { configManager } from "../config_manager/config_manager";
 import { Logger } from "../utils/logger";
 import { isInDirectory } from "../utils/filesystem";
 import { getTimestamp } from "../utils/datetime";
-import { AutoCommitScheduler, isValidCommitInterval } from "./auto_commit";
+import { AutoCommitScheduler, isValidCommitInterval, normalizeCommitInterval } from "./auto_commit";
 import { GitRepository } from "./git_repository";
 
 async function saveNotebookEditors(folder: vscode.WorkspaceFolder, signal: AbortSignal): Promise<void> {
@@ -34,8 +34,7 @@ export class GitService implements vscode.Disposable {
       this.session = { folder, repository };
     }
 
-    const configuredMinutes = configManager.get("autoCommitInterval");
-    const minutes = configuredMinutes === 2 ? 3 : configuredMinutes;
+    const minutes = normalizeCommitInterval(configManager.get("autoCommitInterval"));
     const interval = configManager.get("autoCommit") && isValidCommitInterval(minutes) ? minutes : undefined;
     if (interval !== this.interval) {
       this.interval = interval;
