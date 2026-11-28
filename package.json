@@ -64,12 +64,12 @@
       },
       {
         "command": "daily-notes.previousDailyNote",
-        "title": "Previous Daily Note",
+        "title": "Previous Note",
         "category": "Daily Notes"
       },
       {
         "command": "daily-notes.nextDailyNote",
-        "title": "Next Daily Note",
+        "title": "Next Note",
         "category": "Daily Notes"
       },
       {

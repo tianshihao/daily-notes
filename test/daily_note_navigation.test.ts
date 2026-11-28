@@ -72,6 +72,42 @@ suite("Daily note navigation", function () {
     assert.equal(vscode.window.activeTextEditor?.document.uri.toString(), earlier.toString());
   });
 
+  const periodPairs = [
+    ["2026-11-02.W45.md", "2026-11-23.W48.md"],
+    ["2026-02-01.month.md", "2026-11-01.month.md"],
+    ["2026-01-01.quarter.md", "2026-10-01.quarter.md"],
+    ["2024-01-01.year.md", "2026-01-01.year.md"],
+  ] as const;
+
+  test("navigates existing notes of the same period in a mixed notebook", async () => {
+    const root = vscode.workspace.workspaceFolders![0].uri;
+    const pairs = periodPairs.map(pair => pair.map(filename => vscode.Uri.joinPath(root, filename)));
+    const files = [...pairs.flat(), vscode.Uri.joinPath(root, "2026-11-09.W99.md")];
+    await Promise.all(files.map(file => writeFile(file.fsPath, "# Period note\n")));
+    try {
+      for (const [first, last] of pairs) {
+        await showSource(first);
+        await vscode.commands.executeCommand(next);
+        assert.equal(vscode.window.activeTextEditor?.document.uri.toString(), last.toString());
+        await vscode.commands.executeCommand(next);
+        assert.equal(vscode.window.activeTextEditor?.document.uri.toString(), last.toString());
+        await vscode.commands.executeCommand(previous);
+        assert.equal(vscode.window.activeTextEditor?.document.uri.toString(), first.toString());
+      }
+
+      await showSource(pairs[0][0]);
+      await vscode.commands.executeCommand("markdown.showPreview");
+      await assertPreview("2026-11-02.W45");
+      await vscode.commands.executeCommand(next);
+      await assertPreview("2026-11-23.W48");
+      const preview = vscode.window.tabGroups.activeTabGroup.activeTab;
+      assert.ok(preview);
+      await vscode.window.tabGroups.close(preview);
+    } finally {
+      await Promise.all(files.map(file => unlink(file.fsPath)));
+    }
+  });
+
   test("keeps Markdown preview open when skipping dates in either direction", async () => {
     await showSource(earlier);
     await vscode.commands.executeCommand("markdown.showPreview");

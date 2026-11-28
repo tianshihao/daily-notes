@@ -67,9 +67,9 @@ export function activate(context: vscode.ExtensionContext) {
     register("daily-notes.openThisMonthsMonthlyNote", () => openCurrentNote("month")),
     register("daily-notes.openThisQuartersQuarterlyNote", () => openCurrentNote("quarter")),
     register("daily-notes.openThisYearsYearlyNote", () => openCurrentNote("year")),
-    register("daily-notes.previousDailyNote", () => navigateDailyNote("previous")),
-    register("daily-notes.nextDailyNote", () => navigateDailyNote("next")),
-    register("daily-notes.openSameDayLastYear", () => navigateDailyNote("lastYear")),
+    register("daily-notes.previousDailyNote", () => navigateNote("previous")),
+    register("daily-notes.nextDailyNote", () => navigateNote("next")),
+    register("daily-notes.openSameDayLastYear", () => navigateNote("lastYear")),
     register("daily-notes.setUpNotebook", setUpNotebook),
     register("daily-notes.openNoteTemplate", () => runNoteCommand(async () => {
       const root = await getNotebookPath();
@@ -155,13 +155,21 @@ async function openCurrentNote(period: NotePeriod) {
   });
 }
 
-async function listDailyNotes(notebookPath: string): Promise<string[]> {
-  const entries = await fs.promises.readdir(notebookPath, { withFileTypes: true });
-  return entries
-    .filter(entry => entry.isFile() && entry.name.endsWith(".md"))
-    .map(entry => entry.name.slice(0, -3))
-    .filter(date => parseNoteDate(date))
-    .sort();
+function notePeriodFromFilename(filename: string): NotePeriod | undefined {
+  const match = /^(\d{4}-\d{2}-\d{2})(?:\.(W\d{2}|month|quarter|year))?\.md$/.exec(filename);
+  const date = match && parseNoteDate(match[1]);
+  if (!date || !match) {
+    return;
+  }
+  const suffix = match[2];
+  if (!suffix) {
+    return "day";
+  }
+  const period = suffix.startsWith("W") ? "week" : suffix as NotePeriod;
+  const localDate = new Date(0);
+  localDate.setHours(12, 0, 0, 0);
+  localDate.setFullYear(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+  return getNotePeriod(period, localDate).filename === filename ? period : undefined;
 }
 
 async function openOrCreateNote(notebookPath: string, filename: string, createContent: () => Promise<string>) {
@@ -186,7 +194,7 @@ async function openOrCreateNote(notebookPath: string, filename: string, createCo
   await showNote(filePath);
 }
 
-async function navigateDailyNote(direction: "previous" | "next" | "lastYear") {
+async function navigateNote(direction: "previous" | "next" | "lastYear") {
   await runNoteCommand(async () => {
     const notebook = findWorkspaceDirectory(configManager.get("notebookPath"));
     const tabInput = vscode.window.tabGroups.activeTabGroup.activeTab?.input;
@@ -198,18 +206,21 @@ async function navigateDailyNote(direction: "previous" | "next" | "lastYear") {
       : vscode.window.activeTextEditor;
     const document = editor?.document;
     const fileName = document && path.basename(document.uri.fsPath);
-    const date = fileName?.endsWith(".md") ? fileName.slice(0, -3) : undefined;
-    if (!notebook || !document || !date || !parseNoteDate(date) ||
+    const period = fileName && notePeriodFromFilename(fileName);
+    if (!notebook || !document || !fileName || !period || (direction === "lastYear" && period !== "day") ||
         path.relative(notebook.uri.fsPath, path.dirname(document.uri.fsPath)) !== "" ||
         !isMarkdownFileInDirectory(document.uri, notebook.uri)) {
       if (inPreview && document) {
         await vscode.commands.executeCommand("markdown.showPreview", document.uri);
       }
-      void vscode.window.showInformationMessage("Open a daily note in the notebook folder first.");
+      void vscode.window.showInformationMessage(direction === "lastYear"
+        ? "Open a daily note in the notebook folder first."
+        : "Open a dated note in the notebook folder first.");
       return;
     }
     let target: vscode.Uri | undefined;
     if (direction === "lastYear") {
+      const date = fileName.slice(0, -3);
       const year = Number(date.slice(0, 4)) - 1;
       const lastYear = String(year).padStart(4, "0") + date.slice(4);
       if (parseNoteDate(lastYear)) {
@@ -220,12 +231,16 @@ async function navigateDailyNote(direction: "previous" | "next" | "lastYear") {
         }
       }
     } else {
-      const dates = await listDailyNotes(notebook.uri.fsPath);
+      const entries = await fs.promises.readdir(notebook.uri.fsPath, { withFileTypes: true });
+      const filenames = entries
+        .filter(entry => entry.isFile() && notePeriodFromFilename(entry.name) === period)
+        .map(entry => entry.name)
+        .sort();
       const adjacent = direction === "previous"
-        ? dates.reverse().find(candidate => candidate < date)
-        : dates.find(candidate => candidate > date);
+        ? filenames.reverse().find(candidate => candidate < fileName)
+        : filenames.find(candidate => candidate > fileName);
       if (adjacent) {
-        target = vscode.Uri.joinPath(notebook.uri, adjacent + ".md");
+        target = vscode.Uri.joinPath(notebook.uri, adjacent);
       }
     }
 
@@ -237,7 +252,7 @@ async function navigateDailyNote(direction: "previous" | "next" | "lastYear") {
     if (!target) {
       const message = direction === "lastYear"
         ? "There is no daily note for the same date last year."
-        : `There is no ${direction} daily note.`;
+        : `There is no ${direction} note for this period type.`;
       void vscode.window.showInformationMessage(message);
     }
   });
