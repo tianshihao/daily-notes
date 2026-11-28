@@ -21,7 +21,12 @@ class DocTemplate<M> {
     return DocTemplate.instance;
   }
 
-  private generateDailyNote(): string {
+  private generateDailyNote(selectedDate?: Date): string {
+    if (selectedDate) {
+      const date = selectedDate.toISOString().slice(0, 10);
+      const weekday = selectedDate.toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" });
+      return `# ${date} ${weekday}\n`;
+    }
     const date = dateTime.getDate().replace(new RegExp("/", "g"), "-");
     const weekDay = dateTime.getWeekDay();
     const dateTitle = `${date} ${weekDay}`;
@@ -39,10 +44,10 @@ class DocTemplate<M> {
     return `# List Note\n\nContent for List Note.`;
   }
 
-  public generateContent<K extends keyof M>(docTemplate: K): string {
+  public generateContent<K extends keyof M>(docTemplate: K, selectedDate?: Date): string {
     switch (docTemplate) {
       case "dailyNote":
-        return this.generateDailyNote();
+        return this.generateDailyNote(selectedDate);
       case "weeklyNote":
         return this.generateWeeklyNote();
       case "listNote":

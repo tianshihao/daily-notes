@@ -20,6 +20,8 @@ Open today's Markdown note in VS Code with a single command. Run it again later 
 
 Use **Daily Notes: Insert Timestamp** to mark an entry.
 
+From a dated note in the notebook root, use **Daily Notes: Previous Daily Note** or **Daily Notes: Next Daily Note** to jump between existing notes by date. Both commands skip days without notes.
+
 If setup prompts again, open the notebook folder itself in VS Code. In **Workspace Settings**, set `dailyNotes.notebookPath` to its full path. The path must match one of the folders open at the root of the workspace.
 
 ## Status bar

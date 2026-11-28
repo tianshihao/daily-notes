@@ -43,6 +43,16 @@
         "category": "Daily Notes"
       },
       {
+        "command": "daily-notes.previousDailyNote",
+        "title": "Previous Daily Note",
+        "category": "Daily Notes"
+      },
+      {
+        "command": "daily-notes.nextDailyNote",
+        "title": "Next Daily Note",
+        "category": "Daily Notes"
+      },
+      {
         "command": "daily-notes.setUpNotebook",
         "title": "Setup Notebook",
         "category": "Daily Notes"

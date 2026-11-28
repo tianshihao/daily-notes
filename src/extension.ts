@@ -61,6 +61,8 @@ export function activate(context: vscode.ExtensionContext) {
     }),
     register("daily-notes.helloWorld", () => vscode.window.showInformationMessage("Hello World from Daily Notes!")),
     register("daily-notes.openTodaysDailyNote", openTodaysDailyNote),
+    register("daily-notes.previousDailyNote", () => openAdjacentNote("previous")),
+    register("daily-notes.nextDailyNote", () => openAdjacentNote("next")),
     register("daily-notes.setUpNotebook", setUpNotebook),
     register("daily-notes.insertTimestamp", insertTimestamp),
     register("daily-notes.toggleDocumentStats", () => toggleStatusVisibility("showDocumentStats")),
@@ -100,57 +102,112 @@ function insertTimestamp() {
   }
 }
 
-// The entry of the extension.
-async function openTodaysDailyNote() {
-  Logger.info("openTodaysDailyNote");
-
-  let notebookPath = findWorkspaceDirectory(configManager.get("notebookPath"))?.uri.fsPath;
-  if (!notebookPath) {
-    Logger.warn("Notebook directory is not set.");
-    // todo tianshihao, should it return by a boolean value?
-    if (false === (await setUpNotebook())) {
-      Logger.error("Failed to set up notebook directory.");
-      vscode.window.showErrorMessage("Failed to set up notebook directory.");
-      return;
-    }
-    notebookPath = configManager.get("notebookPath");
-    if (!isExistingDirectory(notebookPath)) {
-      Logger.error("Notebook directory does not exist.");
-      vscode.window.showErrorMessage("Notebook directory does not exist.");
-      return;
-    }
+function parseNoteDate(value: string): Date | undefined {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || value.startsWith("0000")) {
+    return;
   }
+  const date = new Date(value + "T00:00:00Z");
+  if (!Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value) {
+    return date;
+  }
+}
 
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, "0");
-  const day = String(today.getDate()).padStart(2, "0");
+async function getNotebookPath(): Promise<string | undefined> {
+  const configured = findWorkspaceDirectory(configManager.get("notebookPath"));
+  if (configured) {
+    return configured.uri.fsPath;
+  }
+  if (await setUpNotebook()) {
+    const notebookPath = configManager.get("notebookPath");
+    if (isExistingDirectory(notebookPath)) {
+      return notebookPath;
+    }
+    void vscode.window.showErrorMessage("Notebook directory does not exist.");
+  }
+}
 
-  const fileName = `${year}-${month}-${day}.md`;
-
-  const filePath = path.join(notebookPath, fileName);
-
-  Logger.info(`Opening today's daily note: ${filePath}`);
-
-  fs.access(filePath, fs.constants.F_OK, (err) => {
-    if (err) {
-      const initialContent = docTemplate.generateContent("dailyNote");
-      fs.writeFile(filePath, initialContent, (err) => {
-        if (err) {
-          Logger.error("Failed to create file");
-          vscode.window.showErrorMessage("Failed to create file");
-        } else {
-          vscode.workspace.openTextDocument(filePath).then((doc) => {
-            vscode.window.showTextDocument(doc);
-          });
-        }
-      });
-    } else {
-      vscode.workspace.openTextDocument(filePath).then((doc) => {
-        vscode.window.showTextDocument(doc);
-      });
+async function openTodaysDailyNote() {
+  const now = new Date();
+  const today = [
+    String(now.getFullYear()).padStart(4, "0"),
+    String(now.getMonth() + 1).padStart(2, "0"),
+    String(now.getDate()).padStart(2, "0"),
+  ].join("-");
+  await runNoteCommand(async () => {
+    const notebookPath = await getNotebookPath();
+    if (notebookPath) {
+      await openDatedNote(notebookPath, today);
     }
   });
+}
+
+async function listDailyNotes(notebookPath: string): Promise<string[]> {
+  const entries = await fs.promises.readdir(notebookPath, { withFileTypes: true });
+  return entries
+    .filter(entry => entry.isFile() && entry.name.endsWith(".md"))
+    .map(entry => entry.name.slice(0, -3))
+    .filter(date => parseNoteDate(date))
+    .sort();
+}
+
+async function openDatedNote(notebookPath: string, date: string) {
+  const filePath = path.join(notebookPath, date + ".md");
+  try {
+    await fs.promises.stat(filePath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+      throw error;
+    }
+    try {
+      await fs.promises.writeFile(filePath, docTemplate.generateContent("dailyNote", parseNoteDate(date)), { flag: "wx" });
+    } catch (writeError) {
+      if ((writeError as NodeJS.ErrnoException).code !== "EEXIST") {
+        throw writeError;
+      }
+    }
+  }
+  if (!isMarkdownFileInDirectory(vscode.Uri.file(filePath), vscode.Uri.file(notebookPath))) {
+    throw new Error("The daily note must resolve to a file inside the notebook.");
+  }
+  await showNote(filePath);
+}
+
+async function openAdjacentNote(direction: "previous" | "next") {
+  await runNoteCommand(async () => {
+    const notebook = findWorkspaceDirectory(configManager.get("notebookPath"));
+    const document = vscode.window.activeTextEditor?.document;
+    const fileName = document && path.basename(document.uri.fsPath);
+    const date = fileName?.endsWith(".md") ? fileName.slice(0, -3) : undefined;
+    if (!notebook || !document || !date || !parseNoteDate(date) ||
+        path.relative(notebook.uri.fsPath, path.dirname(document.uri.fsPath)) !== "" ||
+        !isMarkdownFileInDirectory(document.uri, notebook.uri)) {
+      void vscode.window.showInformationMessage("Open a daily note in the notebook folder first.");
+      return;
+    }
+    const dates = await listDailyNotes(notebook.uri.fsPath);
+    const adjacent = direction === "previous"
+      ? dates.reverse().find(candidate => candidate < date)
+      : dates.find(candidate => candidate > date);
+    if (adjacent) {
+      await showNote(path.join(notebook.uri.fsPath, adjacent + ".md"));
+    } else {
+      void vscode.window.showInformationMessage(`There is no ${direction} daily note.`);
+    }
+  });
+}
+
+async function showNote(filePath: string) {
+  const document = await vscode.workspace.openTextDocument(filePath);
+  await vscode.window.showTextDocument(document);
+}
+
+async function runNoteCommand(action: () => Promise<void>) {
+  try {
+    await action();
+  } catch (error) {
+    Logger.error(String(error));
+    void vscode.window.showErrorMessage(`Could not open the daily note. ${String(error)}`);
+  }
 }
 
 async function setUpNotebook(): Promise<boolean> {
