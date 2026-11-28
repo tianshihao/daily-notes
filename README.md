@@ -51,11 +51,11 @@ Only the active Markdown note is analyzed. Hiding Document Stats stops both coun
 
 On VS Code 1.90, a newly opened file must fit within 52,428,800 UTF-16 code units for VS Code to expose its text to extensions. An ordinary Han character uses one unit and a supplementary character such as `𠮷` uses two. This limit applies to each file individually. [VS Code text model](https://github.com/microsoft/vscode/blob/1.90.0/src/vs/editor/common/model/textModel.ts)
 
-Click the Daily Notes status bar item to view and toggle its display and Git settings.
+Click the Daily Notes status bar item to toggle its display options, automatic commits, or automatic sync.
 
 ## Optional Git sync
 
-Use an existing Git repository or initialize one in the notebook folder. Run **Daily Notes: Toggle Enable Git** to enable Git, start automatic commits, and leave automatic sync off. Switching notebooks in the same window also switches the repository used by these commands.
+Use an existing Git repository or initialize one in the notebook folder. Enable `dailyNotes.enableGit` in Workspace Settings to use Git integration. Configure automatic commits and sync independently. Disabling Git pauses both and preserves their settings. Switching notebooks in the same window also switches the repository used by these commands.
 
 - **Daily Notes: Commit** saves open, modified documents under the notebook folder and commits changes within it, including new and deleted files. Files already staged elsewhere in the same repository stay staged.
 - **Daily Notes: Sync** first commits notebook changes locally, then fetches the checked-out branch's upstream (for example, `origin/main`). It fast-forwards a branch that is behind or pushes one that is ahead. If both sides have new commits, it stops so you can reconcile them in Git. Sync applies to the whole branch, including any earlier local commits. Use `git branch -vv` to see which upstream your branch tracks.

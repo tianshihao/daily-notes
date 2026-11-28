@@ -1,11 +1,12 @@
 import * as assert from "node:assert/strict";
 import * as vscode from "vscode";
 
-suite("Status bar commands", () => {
+suite("Settings commands", () => {
   const keys = ["showDocumentStats", "showGitStatus", "enableGit", "autoCommit", "autoSync"] as const;
   const commands = [
     ["daily-notes.toggleDocumentStats", "showDocumentStats"],
     ["daily-notes.toggleGitStatus", "showGitStatus"],
+    ["daily-notes.toggleEnableGit", "enableGit"],
   ] as const;
 
   function effectiveSettings() {
@@ -14,14 +15,14 @@ suite("Status bar commands", () => {
   }
 
   for (const [command, key] of commands) {
-    test(`${command} toggles only its display setting`, async () => {
+    test(`${command} toggles only its own setting`, async () => {
       const hasWorkspace = !!(vscode.workspace.workspaceFile || vscode.workspace.workspaceFolders?.length);
       const target = hasWorkspace ? vscode.ConfigurationTarget.Workspace : vscode.ConfigurationTarget.Global;
       const scope = hasWorkspace ? "workspaceValue" : "globalValue";
       const config = vscode.workspace.getConfiguration("dailyNotes");
       const before = effectiveSettings();
       const original = config.inspect<boolean>(key);
-      assert.strictEqual(original?.defaultValue, true);
+      assert.strictEqual(original?.defaultValue, key !== "enableGit");
 
       try {
         for (const expected of [!before[key], before[key]]) {

@@ -128,6 +128,14 @@
         "category": "Daily Notes"
       }
     ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "daily-notes.toggleEnableGit",
+          "when": "false"
+        }
+      ]
+    },
     "configuration": {
       "title": "Daily Notes",
       "properties": {

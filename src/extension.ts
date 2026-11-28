@@ -74,7 +74,7 @@ export function activate(context: vscode.ExtensionContext) {
     register("daily-notes.showStatusBarActions", showStatusBarActions),
     register("daily-notes.toggleDocumentStats", () => toggleStatusVisibility("showDocumentStats")),
     register("daily-notes.toggleGitStatus", () => toggleStatusVisibility("showGitStatus")),
-    register("daily-notes.toggleEnableGit", toggleEnableGit),
+    register("daily-notes.toggleEnableGit", () => toggleSetting("enableGit")),
     register("daily-notes.commit", () => git.commit()),
     register("daily-notes.sync", async () => {
       await git.sync();
@@ -456,7 +456,6 @@ async function showStatusBarActions() {
   const actions = [
     { label: "Document Stats", key: "showDocumentStats", command: "daily-notes.toggleDocumentStats" },
     { label: "Git Status", key: "showGitStatus", command: "daily-notes.toggleGitStatus" },
-    { label: "Git Integration", key: "enableGit", command: "daily-notes.toggleEnableGit" },
     { label: "Auto Commit", key: "autoCommit", command: "daily-notes.toggleAutoCommit" },
     { label: "Auto Sync", key: "autoSync", command: "daily-notes.toggleautoSync" },
   ] as const;
@@ -479,20 +478,7 @@ function toggleStatusVisibility(key: "showDocumentStats" | "showGitStatus") {
   return configManager.update(key, !configManager.get(key), target);
 }
 
-async function toggleEnableGit() {
-  const target = vscode.ConfigurationTarget.Workspace;
-  const enable = !configManager.get("enableGit");
-  if (!enable) {
-    await configManager.update("enableGit", false, target);
-  }
-  await configManager.update("autoSync", false, target);
-  await configManager.update("autoCommit", enable, target);
-  if (enable) {
-    await configManager.update("enableGit", true, target);
-  }
-}
-
-function toggleSetting(key: "autoCommit" | "autoSync") {
+function toggleSetting(key: "enableGit" | "autoCommit" | "autoSync") {
   return configManager.update(key, !configManager.get(key), vscode.ConfigurationTarget.Workspace);
 }
 
