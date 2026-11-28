@@ -5,7 +5,7 @@ suite("Note periods", () => {
   test("uses the Monday date and ISO week number across calendar years", () => {
     const note = getNotePeriod("week", new Date(2027, 0, 1, 12));
     assert.equal(note.filename, "2026-12-28.W53.md");
-    assert.equal(note.heading, "Week 53 · 2026-12-28 – 2027-01-03");
+    assert.equal(renderNoteTemplate(defaultNoteTemplates.week, note.variables), "# Week 53 · 2026-12-28 – 2027-01-03\n");
     assert.equal(getNotePeriod("week", new Date(2027, 0, 4, 12)).filename, "2027-01-04.W01.md");
   });
 

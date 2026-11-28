@@ -1,6 +1,6 @@
 import * as assert from "node:assert/strict";
 import * as vscode from "vscode";
-import { getNotePeriod } from "../src/notes/period";
+import { defaultNoteTemplates, getNotePeriod, renderNoteTemplate } from "../src/notes/period";
 import { DocumentAnalyzer } from "../src/document_analysis/document_analyzer";
 
 suite("Document analysis", () => {
@@ -47,7 +47,8 @@ suite("Document analysis", () => {
 
   test("leaves the language undetermined until a note contains prose", async () => {
     assert.deepEqual(analyzer.analyze(await openNote("")), { wordCount: 0, language: "und" });
-    const newDailyNote = await openNote(`# ${getNotePeriod("day", new Date(2026, 10, 28, 12)).heading}\n`);
+    const { variables } = getNotePeriod("day", new Date(2026, 10, 28, 12));
+    const newDailyNote = await openNote(renderNoteTemplate(defaultNoteTemplates.day, variables));
     assert.equal(analyzer.analyze(newDailyNote).language, "und");
   });
 

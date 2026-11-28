@@ -94,7 +94,7 @@ export function getNotePeriod(period: NotePeriod, now: Date) {
   };
   const suffix = period === "week" ? variables["week:iso"] : period;
   const filename = period === "day" ? `${date}.md` : `${date}.${suffix}.md`;
-  return { filename, heading: renderNoteTemplate(defaultNoteTemplates[period], variables).trimEnd().slice(2), variables };
+  return { filename, variables };
 }
 
 export function renderNoteTemplate(template: string, variables: Readonly<NotePlaceholderValues>): string {
