@@ -2,6 +2,7 @@ import * as assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 import { GitRepository } from "../src/git_service/git_repository";
 import { addTestRemote, git, initTestRepository } from "./git_fixture";
 
@@ -83,6 +84,68 @@ suite("Git repository", function () {
     assert.equal(git(remote, "show", "main:notes/today.md"), "Synced note");
   });
 
+  test("adds a remote without pushing and publishes on the first sync", async () => {
+    const remote = path.join(directory, "journal.git");
+    git(directory, "init", "-q", "--bare", "--template=", remote);
+    assert.deepEqual(await gitRepository!.getSyncRemotes(), { branch: "main", remotes: [] });
+
+    await gitRepository!.setSyncRemote("origin", remote);
+
+    assert.equal(git(repository, "remote", "get-url", "origin"), remote);
+    assert.deepEqual(await gitRepository!.getSyncRemotes(), { remotes: ["origin"] });
+    assert.equal(git(remote, "for-each-ref", "refs/heads"), "");
+    await gitRepository!.sync("Sync notebook");
+    assert.equal(git(remote, "show", "main:notes/today.md"), "Original note");
+
+    git(remote, "update-ref", "-d", "refs/heads/main");
+    await assert.rejects(gitRepository!.sync("Do not recreate an established upstream"));
+    assert.equal(git(remote, "for-each-ref", "refs/heads"), "");
+  });
+
+  test("sets up an existing remote for a branch without changing the remote", async () => {
+    const remote = addTestRemote(directory, repository);
+    git(repository, "branch", "--unset-upstream");
+    git(repository, "checkout", "-qb", "journal");
+    assert.deepEqual(await gitRepository!.getSyncRemotes(), { remotes: ["backup"] });
+
+    await assert.rejects(gitRepository!.setSyncRemote("backup", undefined, "main"), /branch changed during setup/);
+    await gitRepository!.setSyncRemote("backup", undefined, "journal");
+
+    assert.equal(git(repository, "config", "branch.journal.merge"), "refs/heads/journal");
+    assert.equal(git(remote, "for-each-ref", "--format=%(refname)", "refs/heads"), "refs/heads/main");
+    await gitRepository!.sync("Publish journal branch");
+    assert.equal(git(remote, "show", "journal:notes/today.md"), "Original note");
+    assert.equal(git(remote, "rev-parse", "main"), git(repository, "rev-parse", "main"));
+  });
+
+  test("configures sync before the first local commit", async () => {
+    const newNotebook = path.join(directory, "new-notebook");
+    const remote = path.join(directory, "new-notebook.git");
+    fs.mkdirSync(newNotebook);
+    initTestRepository(newNotebook);
+    git(directory, "init", "-q", "--bare", "--template=", remote);
+    const freshRepository = new GitRepository(newNotebook);
+    try {
+      fs.writeFileSync(path.join(newNotebook, "first.md"), "First note\n");
+      await freshRepository.setSyncRemote("origin", remote);
+      assert.deepEqual(await freshRepository.getSyncRemotes(), { remotes: ["origin"] });
+      assert.equal(git(newNotebook, "for-each-ref", "refs/heads"), "");
+      await freshRepository.sync("Publish first note");
+      assert.equal(git(remote, "show", "main:first.md"), "First note");
+    } finally {
+      freshRepository.dispose();
+    }
+  });
+
+  test("commits locally when there is no upstream and rejects unsupported remote helpers", async () => {
+    fs.writeFileSync(note, "Keep local changes\n");
+    await assert.rejects(gitRepository!.sync("Local changes"), /No Git remote is configured/);
+    assert.equal(git(repository, "show", "HEAD:notes/today.md"), "Keep local changes");
+
+    await assert.rejects(gitRepository!.setSyncRemote("origin", "ext::not-a-repository"), /Enter a Git remote/);
+    assert.equal(git(repository, "remote"), "");
+  });
+
   test("reports divergence and keeps both histories, the working files and the index", async () => {
     const remote = addTestRemote(directory, repository);
     advanceUpstream();
@@ -134,6 +197,35 @@ suite("Git repository", function () {
     gitRepository!.dispose();
     await assert.rejects(commit, /no longer active/);
     assert.equal(git(repository, "rev-parse", "HEAD"), head);
+  });
+
+  test("checks for a remote without waiting on a queued sync", async () => {
+    addTestRemote(directory, repository);
+    let signalSave!: () => void;
+    let resumeSave!: () => void;
+    const saving = new Promise<void>(resolve => { signalSave = resolve; });
+    const pendingSave = new Promise<void>(resolve => { resumeSave = resolve; });
+    const pausedRepository = new GitRepository(notebook, () => {
+      signalSave();
+      return pendingSave;
+    });
+    const sync = pausedRepository.sync("Sync notebook");
+    const timeout = new AbortController();
+    try {
+      await saving;
+      const details = await Promise.race([
+        pausedRepository.getSyncRemotes(),
+        delay(3000, undefined, { signal: timeout.signal }).then(() => {
+          throw new Error("Remote check blocked on a queued sync.");
+        }),
+      ]);
+      assert.deepEqual(details, { remotes: ["backup"] });
+    } finally {
+      timeout.abort();
+      resumeSave();
+      await sync;
+      pausedRepository.dispose();
+    }
   });
 
   test("accepts queued commits after a transient index lock is released", async () => {

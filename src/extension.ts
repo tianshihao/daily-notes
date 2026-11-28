@@ -5,6 +5,7 @@ import { configManager } from "./config_manager/config_manager";
 import { GitService } from "./git_service/git_service";
 import { Logger } from "./utils/logger";
 import { NotebookStatusBar, type NotebookStatusOptions } from "./widget/notebook_status_bar";
+import { configureSyncRemote } from "./widget/git_remote_input";
 import { findWorkspaceDirectory, isExistingDirectory, isMarkdownFileInDirectory, matchWorkspaceDirectory } from "./utils/filesystem";
 import { isValidCommitInterval, normalizeCommitInterval } from "./git_service/auto_commit";
 import * as fs from "fs";
@@ -19,6 +20,7 @@ export async function activate(context: vscode.ExtensionContext) {
   let statusOptions: NotebookStatusOptions;
   let editorCheck = 0;
   let gitCheck: Promise<void> | undefined;
+  let autoSyncSetup: Promise<void> | undefined;
 
   function clearStatus() {
     if (activeNote) {
@@ -76,6 +78,28 @@ export async function activate(context: vscode.ExtensionContext) {
     } while (pending !== gitCheck);
   }
 
+  function enableAutoSync(updateSetting: boolean): Promise<void> {
+    if (!autoSyncSetup) {
+      const stillEnabling = () => updateSetting || configManager.get("autoSync");
+      autoSyncSetup = (async () => {
+        await waitForGit();
+        if (!stillEnabling()) {
+          return;
+        }
+        const ready = await git.prepareAutoSync(apply =>
+          configureSyncRemote(async url => stillEnabling() && await apply(url)));
+        if (ready && updateSetting) {
+          await configManager.update("autoSync", true, vscode.ConfigurationTarget.Workspace);
+        }
+      })().catch(error => {
+        Logger.error("Git / Auto Sync Setup", error);
+      }).finally(() => {
+        autoSyncSetup = undefined;
+      });
+    }
+    return autoSyncSetup;
+  }
+
   async function runSync(operation: "Sync" | "Sync and Quit" | "Sync after Commit") {
     try {
       await waitForGit();
@@ -131,16 +155,19 @@ export async function activate(context: vscode.ExtensionContext) {
       gitCheck = undefined;
     } },
     vscode.workspace.onDidChangeConfiguration((event) => {
+      const changed = (key: string) => event.affectsConfiguration(`dailyNotes.${key}`);
       if (event.affectsConfiguration("dailyNotes.notebookPath")) {
         void configureNotebook();
-        return;
+      } else {
+        if (["enableGit", "autoCommit", "autoCommitInterval", "autoSync"].some(changed)) {
+          configureGit();
+        }
+        if (["notebookName", "showDocumentStats", "showGitStatus", "enableGit", "autoCommit", "autoSync"].some(changed)) {
+          void configureStatus();
+        }
       }
-      const changed = (key: string) => event.affectsConfiguration(`dailyNotes.${key}`);
-      if (["enableGit", "autoCommit", "autoCommitInterval", "autoSync"].some(changed)) {
-        configureGit();
-      }
-      if (["notebookName", "showDocumentStats", "showGitStatus", "enableGit", "autoCommit", "autoSync"].some(changed)) {
-        void configureStatus();
+      if ((changed("autoSync") || changed("enableGit")) && configManager.get("enableGit") && configManager.get("autoSync")) {
+        void enableAutoSync(false);
       }
     }),
     vscode.workspace.onDidChangeWorkspaceFolders(configureNotebook),
@@ -188,7 +215,9 @@ export async function activate(context: vscode.ExtensionContext) {
     register("daily-notes.syncAndQuit", () => runSync("Sync and Quit")),
     register("daily-notes.toggleAutoCommit", () => toggleSetting("autoCommit")),
     register("daily-notes.resetAutoCommitInterval", resetAutoCommitInterval),
-    register("daily-notes.toggleautoSync", () => toggleSetting("autoSync"))
+    register("daily-notes.toggleautoSync", () => configManager.get("autoSync")
+      ? toggleSetting("autoSync")
+      : enableAutoSync(true))
   );
   await configureNotebook();
 }

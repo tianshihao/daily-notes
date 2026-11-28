@@ -6,6 +6,8 @@ import { getTimestamp } from "../utils/datetime";
 import { AutoCommitScheduler, isValidCommitInterval, normalizeCommitInterval } from "./auto_commit";
 import { GitRepository } from "./git_repository";
 
+export type ApplySyncRemote = (url: string) => Promise<boolean>;
+
 async function saveNotebookEditors(folder: vscode.WorkspaceFolder, signal: AbortSignal): Promise<void> {
   for (const doc of vscode.workspace.textDocuments) {
     signal.throwIfAborted();
@@ -59,6 +61,29 @@ export class GitService implements vscode.Disposable {
 
   async sync(): Promise<void> {
     return this.requireRepository().sync(this.commitMessage());
+  }
+
+  async prepareAutoSync(
+    configureRemote: (apply: ApplySyncRemote) => Promise<boolean>
+  ): Promise<boolean> {
+    const session = this.session;
+    if (!session) {
+      return true;
+    }
+    const { branch, remotes } = await session.repository.getSyncRemotes();
+    if (session !== this.session) {
+      return false;
+    }
+    if (remotes.length > 0) {
+      return true;
+    }
+    return configureRemote(async url => {
+      if (session !== this.session) {
+        return false;
+      }
+      await session.repository.setSyncRemote("origin", url, branch);
+      return session === this.session;
+    });
   }
 
   private requireRepository(): GitRepository {

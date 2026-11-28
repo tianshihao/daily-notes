@@ -129,6 +129,51 @@ suite("Git service", function () {
     assert.equal(git(remote, "show", "main:entry.md"), "Automatic sync");
   });
 
+  test("configures the remote selected for auto-sync without transferring notes during setup", async () => {
+    const folder = createFolder("notes");
+    initNotebook(folder);
+    const remote = path.join(directory, "empty.git");
+    git(directory, "init", "--bare", "--template=", remote);
+    service.configure(folder);
+
+    assert.equal(await service.prepareAutoSync(async () => false), false);
+    assert.equal(git(folder.uri.fsPath, "remote"), "");
+
+    assert.equal(await service.prepareAutoSync(apply => apply(remote)), true);
+    assert.equal(git(folder.uri.fsPath, "remote", "get-url", "origin"), remote);
+    assert.equal(git(remote, "for-each-ref", "refs/heads"), "");
+
+    settings.autoSync = true;
+    await service.commit();
+    assert.equal(git(remote, "show", "main:entry.md"), "Original");
+  });
+
+  test("does not configure a remote after the selected notebook changes", async () => {
+    const first = createFolder("first");
+    const second = createFolder("second");
+    initNotebook(first);
+    initNotebook(second);
+    service.configure(first);
+
+    assert.equal(await service.prepareAutoSync(apply => {
+      service.configure(second);
+      return apply(path.join(directory, "not-used.git"));
+    }), false);
+    for (const folder of [first, second]) {
+      assert.equal(git(folder.uri.fsPath, "remote"), "");
+    }
+  });
+
+  test("finishes auto-sync setup without asking or changing branch tracking when a remote exists", async () => {
+    const folder = createFolder("notes");
+    initNotebook(folder);
+    git(folder.uri.fsPath, "remote", "add", "backup", path.join(directory, "backup.git"));
+    service.configure(folder);
+
+    assert.equal(await service.prepareAutoSync(async () => assert.fail("There is already a remote")), true);
+    assert.throws(() => git(folder.uri.fsPath, "config", "--local", "--get", "branch.main.remote"));
+  });
+
   for (const change of ["disable Git", "clear notebook"] as const) {
     test(`blocks commits and leaves the editor unsaved after ${change}`, async () => {
       const folder = createFolder("notes");
