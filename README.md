@@ -1,4 +1,7 @@
-# Daily Notes
+<h1 align="center">
+  <img src="./icon.png" alt="" width="256" height="256"><br>
+  Daily Notes
+</h1>
 
 Open today's Markdown note in VS Code with a single command. Run it again later to pick up where you left off. Each note is a regular file in the folder you choose.
 

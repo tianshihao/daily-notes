@@ -1,36 +1,20 @@
-# Roadmap for Daily Notes
+# Daily Notes roadmap
 
-Go back to [README](README.md).
+See the [README](README.md) for current features and the [changelog](CHANGELOG.md) for release history.
 
-## Editing
+## Planned improvements
 
-| Feature                     | Status |
-| --------------------------- | :----: |
-| Create daily note           |   ✅   |
-| Insert date/time            |   ✅   |
-| Templates                   |   💡   |
-| \*Chinese word segmentation |   💡   |
-| Insert title                |   ✅   |
-| Insert weekday              |   ✅   |
-| Muti-language support       |   💡   |
+| Area | Idea |
+| --- | --- |
+| Templates | Let users customize the starting content of new daily notes. The default template currently inserts the date and weekday. |
+| Language support | Improve counting rules for more languages. Explore natural-word segmentation for Chinese as an option alongside the current character count. |
+| Writing statistics | Explore summaries across notes, such as monthly word counts. |
+| Archiving | Explore grouping or merging older notes by month or year. |
+| Git setup | Guide users through connecting a notebook to a new remote and configuring its upstream. |
 
-## Statistics
+## Ideas to evaluate
 
-| Feature                  | Status |
-| ------------------------ | :----: |
-| Word count on status bar |   ✅   |
-| Statistics something...  |   💡   |
+- **Hugo integration.** Explore exporting selected notes for a Hugo site.
+- **Remote recovery.** Explore an explicit workflow for replacing remote history. Routine sync currently fast-forwards or pushes and stops if histories diverge.
 
-## Content Control
-
-| Feature                                   | Status |
-| ----------------------------------------- | :----: |
-| Auto Commit                               |   ✅   |
-| Sync with remote                          |   ✅   |
-| Toggle auto commit(pause for a while)     |   ✅   |
-| Force rewrite the remote repository       |   💡   |
-| Archive the notes(merge by year or month) |   💡   |
-| Connect to new remote repository          |   💡   |
-| \*Integrate with Hugo(Maybe)              |   💡   |
-
-"\*" represents the feature is challenging.
+[Suggest a feature or share a use case](https://github.com/tianshihao/daily-notes/issues).
