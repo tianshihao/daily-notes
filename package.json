@@ -3,7 +3,7 @@
   "displayName": "Daily Notes",
   "icon": "icon.png",
   "description": "Write daily notes using VS Code.",
-  "version": "0.0.10",
+  "version": "0.0.11",
   "engines": {
     "vscode": "^1.90.0"
   },

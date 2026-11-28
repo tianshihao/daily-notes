@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.11 (2026-11-28)
+
+- Add Previous Daily Note and Next Daily Note commands that skip dates with no entry.
+- Keep adjacent notes in Markdown preview when navigating from the preview.
+
 ## 0.0.10 (2026-11-22)
 
 - Show the notebook name, document statistics, and Git settings together when editing Markdown notes in the notebook. Document Stats and Git Status can each be toggled from the Command Palette.
