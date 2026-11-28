@@ -1,6 +1,6 @@
 import { createNoteContent, openNoteTemplate } from "./notes/templates";
 import { setUpNotebook } from "./notes/notebook_setup";
-import { getNotePeriod, type NotePeriod } from "./notes/period";
+import { getNotePeriod, notePeriodFromFilename, type NotePeriod } from "./notes/period";
 import { configManager } from "./config_manager/config_manager";
 import { GitService } from "./git_service/git_service";
 import { Logger } from "./utils/logger";
@@ -127,16 +127,6 @@ function insertTimestamp() {
   }
 }
 
-function parseNoteDate(value: string): Date | undefined {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || value.startsWith("0000")) {
-    return;
-  }
-  const date = new Date(value + "T00:00:00Z");
-  if (!Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value) {
-    return date;
-  }
-}
-
 async function getNotebookPath(): Promise<string | undefined> {
   const configured = findWorkspaceDirectory(configManager.get("notebookPath"));
   if (configured) {
@@ -153,23 +143,6 @@ async function openCurrentNote(period: NotePeriod) {
       await openOrCreateNote(notebookPath, note.filename, () => createNoteContent(notebookPath, period, note.variables));
     }
   });
-}
-
-function notePeriodFromFilename(filename: string): NotePeriod | undefined {
-  const match = /^(\d{4}-\d{2}-\d{2})(?:\.(W\d{2}|month|quarter|year))?\.md$/.exec(filename);
-  const date = match && parseNoteDate(match[1]);
-  if (!date || !match) {
-    return;
-  }
-  const suffix = match[2];
-  if (!suffix) {
-    return "day";
-  }
-  const period = suffix.startsWith("W") ? "week" : suffix as NotePeriod;
-  const localDate = new Date(0);
-  localDate.setHours(12, 0, 0, 0);
-  localDate.setFullYear(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
-  return getNotePeriod(period, localDate).filename === filename ? period : undefined;
 }
 
 async function openOrCreateNote(notebookPath: string, filename: string, createContent: () => Promise<string>) {
@@ -222,9 +195,9 @@ async function navigateNote(direction: "previous" | "next" | "lastYear") {
     if (direction === "lastYear") {
       const date = fileName.slice(0, -3);
       const year = Number(date.slice(0, 4)) - 1;
-      const lastYear = String(year).padStart(4, "0") + date.slice(4);
-      if (parseNoteDate(lastYear)) {
-        const candidate = vscode.Uri.joinPath(notebook.uri, lastYear + ".md");
+      const lastYear = String(year).padStart(4, "0") + date.slice(4) + ".md";
+      if (notePeriodFromFilename(lastYear, "day")) {
+        const candidate = vscode.Uri.joinPath(notebook.uri, lastYear);
         if (isMarkdownFileInDirectory(candidate, notebook.uri) &&
             (await fs.promises.stat(candidate.fsPath)).isFile()) {
           target = candidate;
@@ -232,13 +205,20 @@ async function navigateNote(direction: "previous" | "next" | "lastYear") {
       }
     } else {
       const entries = await fs.promises.readdir(notebook.uri.fsPath, { withFileTypes: true });
-      const filenames = entries
-        .filter(entry => entry.isFile() && notePeriodFromFilename(entry.name) === period)
-        .map(entry => entry.name)
-        .sort();
-      const adjacent = direction === "previous"
-        ? filenames.reverse().find(candidate => candidate < fileName)
-        : filenames.find(candidate => candidate > fileName);
+      const previous = direction === "previous";
+      let adjacent: string | undefined;
+      for (const entry of entries) {
+        const name = entry.name;
+        if (!entry.isFile() || (previous ? name >= fileName : name <= fileName)) {
+          continue;
+        }
+        if (adjacent && (previous ? name <= adjacent : name >= adjacent)) {
+          continue;
+        }
+        if (notePeriodFromFilename(name, period)) {
+          adjacent = name;
+        }
+      }
       if (adjacent) {
         target = vscode.Uri.joinPath(notebook.uri, adjacent);
       }

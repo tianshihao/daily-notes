@@ -3,6 +3,8 @@ export type NotePeriod = (typeof notePeriods)[number];
 
 const formatDate = (date: Date) => date.toISOString().slice(0, 10);
 const twoDigits = (value: number) => String(value).padStart(2, "0");
+const periodMonths = { month: 1, quarter: 3, year: 12 };
+const noteFilenamePattern = /^(\d{4}-\d{2}-\d{2})(?:\.(W\d{2}|month|quarter|year))?\.md$/;
 
 function isoWeekNumber(date: Date): string {
   const thursday = new Date(date);
@@ -10,6 +12,37 @@ function isoWeekNumber(date: Date): string {
   const januaryFirst = new Date(thursday);
   januaryFirst.setUTCMonth(0, 1);
   return twoDigits(Math.floor((thursday.getTime() - januaryFirst.getTime()) / (7 * 86_400_000)) + 1);
+}
+
+function setPeriodStart(period: NotePeriod, date: Date): void {
+  if (period === "week") {
+    date.setUTCDate(date.getUTCDate() - (date.getUTCDay() + 6) % 7);
+  } else if (period !== "day") {
+    const months = periodMonths[period];
+    date.setUTCMonth(Math.floor(date.getUTCMonth() / months) * months, 1);
+  }
+}
+
+export function notePeriodFromFilename(filename: string, expectedPeriod?: NotePeriod): NotePeriod | undefined {
+  const match = noteFilenamePattern.exec(filename);
+  if (!match) {
+    return;
+  }
+  const [, day, suffix] = match;
+  const period = !suffix ? "day" : suffix.startsWith("W") ? "week" : suffix as NotePeriod;
+  if ((expectedPeriod && period !== expectedPeriod) || day.startsWith("0000")) {
+    return;
+  }
+
+  const date = new Date(`${day}T00:00:00Z`);
+  const time = date.getTime();
+  if (Number.isNaN(time) || formatDate(date) !== day) {
+    return;
+  }
+  setPeriodStart(period, date);
+  if (date.getTime() === time && (period !== "week" || suffix === `W${isoWeekNumber(date)}`)) {
+    return period;
+  }
 }
 
 export interface NotePlaceholderValues {
@@ -52,28 +85,12 @@ export function getNotePeriod(period: NotePeriod, now: Date) {
   // Use the local calendar date, then do calendar arithmetic in UTC.
   const start = new Date(0);
   start.setUTCFullYear(now.getFullYear(), now.getMonth(), now.getDate());
-  const month = start.getUTCMonth();
+  setPeriodStart(period, start);
   const end = new Date(start);
-  switch (period) {
-    case "week":
-      start.setUTCDate(start.getUTCDate() - (start.getUTCDay() + 6) % 7);
-      end.setTime(start.getTime());
-      end.setUTCDate(start.getUTCDate() + 6);
-      break;
-    case "month":
-      start.setUTCDate(1);
-      end.setUTCMonth(month + 1, 0);
-      break;
-    case "quarter": {
-      const firstMonth = Math.floor(month / 3) * 3;
-      start.setUTCMonth(firstMonth, 1);
-      end.setUTCMonth(firstMonth + 3, 0);
-      break;
-    }
-    case "year":
-      start.setUTCMonth(0, 1);
-      end.setUTCMonth(11, 31);
-      break;
+  if (period === "week") {
+    end.setUTCDate(start.getUTCDate() + 6);
+  } else if (period !== "day") {
+    end.setUTCMonth(start.getUTCMonth() + periodMonths[period], 0);
   }
 
   const date = formatDate(start);

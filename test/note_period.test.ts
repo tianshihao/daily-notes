@@ -1,5 +1,5 @@
 import * as assert from "node:assert/strict";
-import { defaultNoteTemplates, getNotePeriod, renderNoteTemplate } from "../src/notes/period";
+import { defaultNoteTemplates, getNotePeriod, notePeriodFromFilename, notePeriods, renderNoteTemplate } from "../src/notes/period";
 
 suite("Note periods", () => {
   test("uses the Monday date and ISO week number across calendar years", () => {
@@ -15,6 +15,32 @@ suite("Note periods", () => {
     assert.equal(getNotePeriod("month", date).filename, "2026-11-01.month.md");
     assert.equal(getNotePeriod("quarter", date).filename, "2026-10-01.quarter.md");
     assert.equal(getNotePeriod("year", date).filename, "2026-01-01.year.md");
+  });
+
+  test("recognizes generated filenames only for their own period", () => {
+    const date = new Date(2027, 0, 1, 12);
+    for (const period of notePeriods) {
+      const { filename } = getNotePeriod(period, date);
+      assert.equal(notePeriodFromFilename(filename), period);
+      for (const expected of notePeriods) {
+        assert.equal(notePeriodFromFilename(filename, expected), expected === period ? period : undefined);
+      }
+    }
+    assert.equal(notePeriodFromFilename("2024-02-29.md"), "day");
+  });
+
+  test("rejects filenames that are not valid period boundaries", () => {
+    for (const filename of [
+      "0000-01-01.md",
+      "2026-02-29.md",
+      "2026-12-27.W52.md",
+      "2026-12-28.W01.md",
+      "2026-11-02.month.md",
+      "2026-11-01.quarter.md",
+      "2026-02-01.year.md",
+    ]) {
+      assert.equal(notePeriodFromFilename(filename), undefined, filename);
+    }
   });
 
   test("renders placeholders without changing whitespace", () => {
