@@ -1,10 +1,11 @@
+import { setUpNotebook } from "./notes/notebook_setup";
 import { getNotePeriod, type NotePeriod } from "./notes/period";
-import { configManager } from "./config_manager/config_manager";
 import { docTemplate } from "./doc_template/doc_template";
+import { configManager } from "./config_manager/config_manager";
 import { GitService } from "./git_service/git_service";
 import { Logger } from "./utils/logger";
 import { NotebookStatusBar, type NotebookStatusOptions } from "./widget/notebook_status_bar";
-import { findWorkspaceDirectory, isExistingDirectory, isMarkdownFileInDirectory } from "./utils/filesystem";
+import { findWorkspaceDirectory, isMarkdownFileInDirectory } from "./utils/filesystem";
 import { isValidCommitInterval } from "./git_service/auto_commit";
 import * as fs from "fs";
 import * as path from "path";
@@ -124,13 +125,7 @@ async function getNotebookPath(): Promise<string | undefined> {
   if (configured) {
     return configured.uri.fsPath;
   }
-  if (await setUpNotebook()) {
-    const notebookPath = configManager.get("notebookPath");
-    if (isExistingDirectory(notebookPath)) {
-      return notebookPath;
-    }
-    void vscode.window.showErrorMessage("Notebook directory does not exist.");
-  }
+  return setUpNotebook();
 }
 
 async function openCurrentNote(period: NotePeriod) {
@@ -246,210 +241,6 @@ async function runNoteCommand(action: () => Promise<void>) {
     Logger.error(String(error));
     void vscode.window.showErrorMessage(`Could not open the daily note. ${String(error)}`);
   }
-}
-
-async function setUpNotebook(): Promise<boolean> {
-  Logger.info("setUpNotebook");
-
-  let notebookInfo = { path: "", name: "" };
-
-  let ret = await setNotebookPath(notebookInfo);
-  if (false === ret) {
-    Logger.error("Failed to setup notebook path.");
-    vscode.window.showErrorMessage("Failed to setup notebook path.");
-    return false;
-  }
-
-  ret = await openNotebook(notebookInfo);
-  if (false === ret) {
-    Logger.error("Failed to open notebook path.");
-    vscode.window.showErrorMessage("Failed to open notebook path.");
-  }
-
-  return true;
-}
-
-async function setNotebookPath(notebookInfo: { path: string; name: string }) {
-  Logger.info("setNotebookPath");
-
-  enum Action {
-    Create = "Create",
-    Update = "Update",
-  }
-
-  const actions: vscode.QuickPickItem[] = [
-    {
-      label: Action.Create,
-      description: "Create a new directory for notebook",
-    },
-    {
-      label: Action.Update,
-      description: "Update an existing folder as notebook folder",
-    },
-  ];
-
-  const action = await vscode.window.showQuickPick(actions, {
-    placeHolder: "Setup your notebook folder first.",
-  });
-
-  if (action) {
-    switch (action.label) {
-      case Action.Create: {
-        const notebookNameLocal = await vscode.window.showInputBox({
-          prompt: "Enter the notebook name",
-        });
-
-        if (notebookNameLocal) {
-          const directorySelected = await selectDirectory();
-
-          if (directorySelected) {
-            const notebookPathLocal = path.join(
-              directorySelected,
-              notebookNameLocal
-            );
-
-            try {
-              // Create a directory called notebookNameLocal
-              fs.mkdirSync(notebookPathLocal);
-              vscode.window.showInformationMessage(
-                "Directory created successfully."
-              );
-
-              notebookInfo.path = notebookPathLocal;
-              notebookInfo.name = notebookNameLocal;
-
-              return true;
-            } catch (error) {
-              vscode.window.showErrorMessage("Failed to create directory.");
-              return false;
-            }
-          }
-        }
-        break;
-      }
-      case Action.Update: {
-        const directoryLocal = await selectDirectory();
-
-        if (directoryLocal) {
-          notebookInfo.name = path.basename(directoryLocal);
-          notebookInfo.path = directoryLocal;
-          return true;
-        } else {
-          return false;
-        }
-      }
-    }
-  }
-
-  return false;
-}
-
-async function selectDirectory() {
-  Logger.info("selectDirectory");
-
-  const directory = await vscode.window.showOpenDialog({
-    canSelectFolders: true,
-    canSelectMany: false,
-  });
-
-  return directory && directory[0] ? directory[0].fsPath : null;
-}
-
-async function openNotebook(notebookInfo: {
-  path: string;
-  name: string;
-}): Promise<boolean> {
-  Logger.info("openNotebook");
-
-  enum Action {
-    Current = "Current",
-    New = "New",
-  }
-
-  const actions: vscode.QuickPickItem[] = [
-    {
-      label: Action.Current,
-      description: "Open notebook folder in the current window",
-    },
-    {
-      label: Action.New,
-      description: "Open notebook folder in a new window",
-    },
-  ];
-
-  const action = await vscode.window.showQuickPick(actions, {
-    placeHolder: "debug",
-  });
-
-  if (action) {
-    switch (action.label) {
-      case Action.Current: {
-        return await openNotebookInCurrentWindow(notebookInfo);
-      }
-      case Action.New: {
-        return await openNotebookInNewWindow(notebookInfo);
-      }
-    }
-  }
-
-  return false;
-}
-
-async function openNotebookInCurrentWindow(notebookInfo: {
-  path: string;
-  name: string;
-}): Promise<boolean> {
-  Logger.info("openNotebookInCurrentWindow");
-
-  if (!vscode.workspace.workspaceFolders) {
-    Logger.warn("Open notebook within current empty window.");
-
-    // Open the notebook folder in the current window as single-folder workspace.
-    vscode.commands.executeCommand(
-      "vscode.openFolder",
-      vscode.Uri.file(notebookInfo.path),
-      // false represents that the new folder will be opened in the current window.
-      false
-    );
-  } else if (vscode.workspace.workspaceFolders) {
-    Logger.info("Open notebook within current workspace.");
-
-    // Add the notebookPath to the workspace.
-    vscode.workspace.updateWorkspaceFolders(
-      vscode.workspace.workspaceFolders.length,
-      0,
-      { uri: vscode.Uri.file(notebookInfo.path) }
-    );
-  }
-
-  // Update the configuration with the new notebook path.
-  await configManager.update(
-    "notebookPath",
-    notebookInfo.path,
-    vscode.ConfigurationTarget.Workspace
-  );
-  await configManager.update(
-    "notebookName",
-    notebookInfo.name,
-    vscode.ConfigurationTarget.Workspace
-  );
-
-  return true;
-}
-
-async function openNotebookInNewWindow(notebookInfo: {
-  path: string;
-  name: string;
-}): Promise<boolean> {
-  Logger.info("openNotebookInNewWindow");
-
-  vscode.commands.executeCommand(
-    "vscode.openFolder",
-    vscode.Uri.file(notebookInfo.path),
-    true
-  );
-
-  return true;
 }
 
 async function showStatusBarActions() {

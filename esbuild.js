@@ -36,6 +36,8 @@ async function main() {
 		platform: 'node',
 		outfile: 'dist/extension.js',
 		external: ['vscode'],
+		// The UMD entry loads its internal modules through a dynamic require.
+		alias: { 'jsonc-parser': 'jsonc-parser/lib/esm/main.js' },
 		logLevel: 'silent',
 		plugins: [
 			/* add to the end of plugins array */
