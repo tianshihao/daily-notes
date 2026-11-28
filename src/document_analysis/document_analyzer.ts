@@ -5,6 +5,12 @@ interface DocumentStats {
   readonly language: string;
 }
 
+interface LanguageAnalysis {
+  readonly version: number;
+  readonly sample: string;
+  readonly value: string;
+}
+
 interface Analysis {
   version: number;
   wordCount: number;
@@ -12,8 +18,7 @@ interface Analysis {
   lines?: number[];
   // Previous text is needed because change events omit deleted text.
   plainLongLine?: string;
-  sample?: string;
-  statsVersion?: number;
+  language?: LanguageAnalysis;
   stats?: DocumentStats;
 }
 
@@ -56,15 +61,16 @@ function detectLanguage(sample: string): string {
 
 const unfinishedTag = /<\/?[A-Za-z][\w:-]*(?=\s|\/?>|$)/;
 const ideograph = /\p{Unified_Ideograph}/u;
+const highSurrogate = /[\uD800-\uDBFF]/;
 const letter = /\p{L}/u;
 const longLineLength = 8192;
 const editContextLength = 256;
 
 export class DocumentAnalyzer {
-  private readonly words = new Intl.Segmenter("en", { granularity: "word" });
+  private words?: Intl.Segmenter;
   private readonly documents = new WeakMap<TextDocument, Analysis>();
 
-  analyze(document: TextDocument): DocumentStats {
+  analyze(document: TextDocument, refreshLanguage = true): DocumentStats {
     let analysis = this.documents.get(document);
     if (!analysis || analysis.version !== document.version) {
       const scan = this.scan(document);
@@ -73,16 +79,23 @@ export class DocumentAnalyzer {
         step = scan.next();
       }
       analysis = step.value;
-      this.documents.set(document, analysis);
+      this.cache(document, analysis);
     }
-    if (!analysis.stats || analysis.statsVersion !== document.version) {
+    if (refreshLanguage && analysis.language?.version !== document.version) {
       const sample = getLanguageSample(document);
-      const language = sample === analysis.sample && analysis.stats ? analysis.stats.language : detectLanguage(sample);
-      analysis.sample = sample;
-      analysis.statsVersion = document.version;
+      const value = sample === analysis.language?.sample ? analysis.language.value : detectLanguage(sample);
+      analysis.language = { version: document.version, sample, value };
+    }
+    const language = analysis.language?.value ?? "…";
+    if (analysis.stats?.wordCount !== analysis.wordCount || analysis.stats.language !== language) {
       analysis.stats = { wordCount: analysis.wordCount, language };
     }
     return analysis.stats;
+  }
+
+  private cache(document: TextDocument, analysis: Analysis): void {
+    analysis.language = this.documents.get(document)?.language;
+    this.documents.set(document, analysis);
   }
 
   /** Fill a cold cache in short slices so closing or hiding a large note can interrupt it. */
@@ -106,7 +119,7 @@ export class DocumentAnalyzer {
       do {
         const step = scan.next();
         if (step.done) {
-          this.documents.set(document, step.value);
+          this.cache(document, step.value);
           return;
         }
       } while (performance.now() < deadline);
@@ -249,13 +262,18 @@ export class DocumentAnalyzer {
     // Han uses written characters in this notebook. ICU handles word boundaries elsewhere.
     for (const [run] of text.matchAll(/\p{Unified_Ideograph}+|[^\s\p{Unified_Ideograph}]+/gu)) {
       if (ideograph.test(run)) {
-        for (const _character of run) {
-          count++;
+        if (highSurrogate.test(run)) {
+          for (const _character of run) {
+            count++;
+          }
+        } else {
+          count += run.length;
         }
       } else if (/^[A-Za-z]+[.,;:!?]?$/.test(run)) {
         count++;
       } else if (letter.test(run)) {
-        for (const { segment, isWordLike } of this.words.segment(run)) {
+        const words = this.words ??= new Intl.Segmenter("en", { granularity: "word" });
+        for (const { segment, isWordLike } of words.segment(run)) {
           if (isWordLike && letter.test(segment)) {
             count++;
           }

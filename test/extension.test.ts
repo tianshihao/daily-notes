@@ -62,6 +62,15 @@ suite("Document analysis", () => {
     assert.equal(analyzer.analyze(document).wordCount, 3);
   });
 
+  test("can count a new document version without reclassifying its language", async () => {
+    const document = await openNote("Today I learned how to write a new character in my notebook.");
+    assert.equal(analyzer.analyze(document).language, "en");
+
+    await editNote(document, vscode.TextEdit.replace(document.lineAt(0).range, "今天我们一起讨论了周末的计划"));
+    assert.deepEqual(analyzer.analyze(document, false), { wordCount: 14, language: "en" });
+    assert.deepEqual(analyzer.analyze(document), { wordCount: 14, language: "zh" });
+  });
+
   test("matches a fresh analysis across batched edits and multiline HTML boundaries", async () => {
     const document = await openNote('Today\n<span\n title="draft">notes</span>\nEnd');
     const tracked = new DocumentAnalyzer();

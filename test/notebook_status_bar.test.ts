@@ -216,4 +216,52 @@ suite("Notebook status bar", () => {
       statusBar.dispose();
     }
   });
+
+  test("updates the word count before refreshing language and uses the latest status settings", async () => {
+    const note = await vscode.workspace.openTextDocument({ content: "One" });
+    const initialVersion = note.version;
+    const refreshes: boolean[] = [];
+    let wordsUpdated!: () => void;
+    let languageUpdated!: () => void;
+    const wordsReady = new Promise<void>(resolve => { wordsUpdated = resolve; });
+    const languageReady = new Promise<void>(resolve => { languageUpdated = resolve; });
+    statusBar = createBar({
+      prepare() { return undefined; },
+      analyze(document, refreshLanguage = true) {
+        refreshes.push(refreshLanguage);
+        if (document.version === initialVersion) {
+          return { wordCount: 1, language: "en" };
+        }
+        if (refreshLanguage) {
+          languageUpdated();
+          return { wordCount: 4, language: "zh" };
+        }
+        wordsUpdated();
+        return { wordCount: 4, language: "en" };
+      },
+      recordChanges() {},
+    });
+    statusBar.render(note, options);
+    const listener = vscode.workspace.onDidChangeTextDocument(event => {
+      if (event.document === note && event.contentChanges.length) {
+        statusBar.scheduleEdit(event, options);
+      }
+    });
+    try {
+      const edit = new vscode.WorkspaceEdit();
+      edit.replace(note.uri, note.lineAt(0).range, "今天下雨");
+      assert.ok(await vscode.workspace.applyEdit(edit));
+      await wordsReady;
+      assert.match(items[0].text, /^Words: 4 · Language: en/);
+
+      statusBar.render(note, { ...options, notebookName: "Journal", enableGit: false });
+      assert.deepEqual(refreshes, [true, false, false]);
+      await languageReady;
+      assert.equal(items[0].text, "Journal  |  Words: 4 · Language: zh  |  Git: Off");
+      assert.deepEqual(refreshes, [true, false, false, true]);
+    } finally {
+      listener.dispose();
+      statusBar.dispose();
+    }
+  });
 });
