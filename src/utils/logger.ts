@@ -1,26 +1,30 @@
-import { LogOutputChannel, window } from "vscode";
+import { type LogOutputChannel, window } from "vscode";
 
 export class Logger {
-  private static output: LogOutputChannel;
+  private static output?: LogOutputChannel;
 
-  public static init(): LogOutputChannel {
-    Logger.output = window.createOutputChannel("Daily Notes", { log: true });
-    return Logger.output;
+  public static dispose(): void {
+    Logger.output?.dispose();
+    Logger.output = undefined;
+  }
+
+  private static get channel(): LogOutputChannel {
+    return Logger.output ??= window.createOutputChannel("Daily Notes", { log: true });
   }
 
   public static error(msg: string): void {
-    Logger.output.error(msg);
+    Logger.channel.error(msg);
   }
   public static warn(msg: string): void {
-    Logger.output.warn(msg);
+    Logger.channel.warn(msg);
   }
   public static info(msg: string): void {
-    Logger.output.info(msg);
+    Logger.channel.info(msg);
   }
   public static debug(msg: string): void {
-    Logger.output.debug(msg);
+    Logger.channel.debug(msg);
   }
   public static trace(msg: string): void {
-    Logger.output.trace(msg);
+    Logger.channel.trace(msg);
   }
 }

@@ -1,6 +1,6 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { applyEdits, modify, parseTree, type ParseError } from "jsonc-parser";
+import type { ParseError } from "jsonc-parser";
 import * as vscode from "vscode";
 import { configManager } from "../config_manager/config_manager";
 import { findWorkspaceDirectory } from "../utils/filesystem";
@@ -88,13 +88,13 @@ async function selectNotebook(): Promise<(NotebookFolder & { create: boolean }) 
 }
 
 async function addNotebookToWorkspace(directory: string): Promise<void> {
-  if (findWorkspaceDirectory(directory)) {
+  if (await findWorkspaceDirectory(directory)) {
     return;
   }
   const folders = vscode.workspace.workspaceFolders ?? [];
   await new Promise<void>((resolve, reject) => {
-    const listener = vscode.workspace.onDidChangeWorkspaceFolders(() => {
-      if (findWorkspaceDirectory(directory)) {
+    const listener = vscode.workspace.onDidChangeWorkspaceFolders(async () => {
+      if (await findWorkspaceDirectory(directory)) {
         clearTimeout(timer);
         listener.dispose();
         resolve();
@@ -123,6 +123,7 @@ export async function saveNotebookFolderSettings(notebook: NotebookFolder): Prom
       throw error;
     }
   }
+  const { applyEdits, modify, parseTree } = require("jsonc-parser") as typeof import("jsonc-parser");
   const errors: ParseError[] = [];
   const root = parseTree(original, errors, { allowTrailingComma: true, allowEmptyContent: true });
   if (errors.length || (root && root.type !== "object")) {

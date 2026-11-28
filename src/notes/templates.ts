@@ -72,7 +72,7 @@ async function existingTemplate(root: string, relative: string): Promise<string>
     }
     throw error;
   });
-  if (!entry.isFile() || !isMarkdownFileInDirectory(vscode.Uri.file(filename), vscode.Uri.file(root))) {
+  if (!entry.isFile() || !(await isMarkdownFileInDirectory(vscode.Uri.file(filename), vscode.Uri.file(root)))) {
     throw new Error(`Template must resolve to a regular file inside the notebook: "${relative}".`);
   }
   return filename;

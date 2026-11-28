@@ -5,29 +5,78 @@ import { configManager } from "./config_manager/config_manager";
 import { GitService } from "./git_service/git_service";
 import { Logger } from "./utils/logger";
 import { NotebookStatusBar, type NotebookStatusOptions } from "./widget/notebook_status_bar";
-import { findWorkspaceDirectory, isMarkdownFileInDirectory } from "./utils/filesystem";
+import { findWorkspaceDirectory, isExistingDirectory, isMarkdownFileInDirectory, matchWorkspaceDirectory } from "./utils/filesystem";
 import { isValidCommitInterval, normalizeCommitInterval } from "./git_service/auto_commit";
 import * as fs from "fs";
 import * as path from "path";
 import * as vscode from "vscode";
 
-export function activate(context: vscode.ExtensionContext) {
-  const log = Logger.init();
+export async function activate(context: vscode.ExtensionContext) {
   const git = new GitService();
-  const statusBar = new NotebookStatusBar();
+  let statusBar: NotebookStatusBar | undefined;
   let folder: vscode.WorkspaceFolder | undefined;
   let activeNote: vscode.TextDocument | undefined;
   let statusOptions: NotebookStatusOptions;
+  let editorCheck = 0;
+  let gitCheck: Promise<void> | undefined;
 
-  function refreshEditor(editor = vscode.window.activeTextEditor) {
-    const document = editor?.document;
-    activeNote = document && folder && isMarkdownFileInDirectory(document.uri, folder.uri) ? document : undefined;
-    statusBar.render(activeNote, statusOptions);
+  function clearStatus() {
+    if (activeNote) {
+      activeNote = undefined;
+      statusBar?.render(undefined, statusOptions);
+    }
   }
 
-  function configure() {
-    folder = findWorkspaceDirectory(configManager.get("notebookPath"));
-    git.configure(folder);
+  async function refreshEditor(editor = vscode.window.activeTextEditor) {
+    const check = ++editorCheck;
+    const document = editor?.document;
+    if (!document || !folder || !(statusOptions.showDocumentStats || statusOptions.showGitStatus)) {
+      clearStatus();
+      return;
+    }
+    if (document !== activeNote) {
+      clearStatus();
+    }
+    const eligible = await isMarkdownFileInDirectory(document.uri, folder.uri);
+    if (check !== editorCheck) {
+      return;
+    }
+    if (!eligible) {
+      clearStatus();
+      return;
+    }
+    if (!statusBar) {
+      statusBar = new NotebookStatusBar();
+      context.subscriptions.push(statusBar);
+    }
+    activeNote = document;
+    statusBar.render(document, statusOptions);
+  }
+
+  function configureGit() {
+    const selected = folder;
+    if (!selected || !configManager.get("enableGit")) {
+      gitCheck = undefined;
+      git.configure(undefined);
+      return;
+    }
+    const check = isExistingDirectory(selected.uri.fsPath).then(exists => {
+      if (check === gitCheck) {
+        git.configure(exists ? selected : undefined);
+      }
+    });
+    gitCheck = check;
+  }
+
+  async function waitForGit() {
+    let pending: Promise<void> | undefined;
+    do {
+      pending = gitCheck;
+      await pending;
+    } while (pending !== gitCheck);
+  }
+
+  function configureStatus() {
     statusOptions = {
       notebookName: configManager.get("notebookName"),
       showDocumentStats: configManager.get("showDocumentStats"),
@@ -36,20 +85,47 @@ export function activate(context: vscode.ExtensionContext) {
       autoCommit: configManager.get("autoCommit"),
       autoSync: configManager.get("autoSync"),
     };
-    refreshEditor();
+    if (activeNote && activeNote === vscode.window.activeTextEditor?.document &&
+      (statusOptions.showDocumentStats || statusOptions.showGitStatus)) {
+      statusBar?.render(activeNote, statusOptions);
+      return;
+    }
+    return refreshEditor();
+  }
+
+  async function configureNotebook() {
+    const selected = matchWorkspaceDirectory(configManager.get("notebookPath"));
+    if (selected?.uri.toString() !== folder?.uri.toString()) {
+      git.dispose();
+      clearStatus();
+    }
+    folder = selected;
+    configureGit();
+    await Promise.all([gitCheck, configureStatus()]);
   }
 
   const register = vscode.commands.registerCommand;
   context.subscriptions.push(
-    log,
+    Logger,
     git,
-    statusBar,
+    { dispose() {
+      editorCheck++;
+      gitCheck = undefined;
+    } },
     vscode.workspace.onDidChangeConfiguration((event) => {
-      if (event.affectsConfiguration("dailyNotes")) {
-        configure();
+      if (event.affectsConfiguration("dailyNotes.notebookPath")) {
+        void configureNotebook();
+        return;
+      }
+      const changed = (key: string) => event.affectsConfiguration(`dailyNotes.${key}`);
+      if (["enableGit", "autoCommit", "autoCommitInterval", "autoSync"].some(changed)) {
+        configureGit();
+      }
+      if (["notebookName", "showDocumentStats", "showGitStatus", "enableGit", "autoCommit", "autoSync"].some(changed)) {
+        void configureStatus();
       }
     }),
-    vscode.workspace.onDidChangeWorkspaceFolders(configure),
+    vscode.workspace.onDidChangeWorkspaceFolders(configureNotebook),
     vscode.window.onDidChangeActiveTextEditor(refreshEditor),
     vscode.workspace.onDidChangeTextDocument((event) => {
       const { document, contentChanges } = event;
@@ -58,7 +134,7 @@ export function activate(context: vscode.ExtensionContext) {
         statusOptions.showDocumentStats &&
         document === activeNote && document === vscode.window.activeTextEditor?.document
       ) {
-        statusBar.scheduleEdit(event, statusOptions);
+        statusBar?.scheduleEdit(event, statusOptions);
       }
     }),
     register("daily-notes.helloWorld", () => vscode.window.showInformationMessage("Hello World from Daily Notes!")),
@@ -82,13 +158,18 @@ export function activate(context: vscode.ExtensionContext) {
     register("daily-notes.toggleDocumentStats", () => toggleStatusVisibility("showDocumentStats")),
     register("daily-notes.toggleGitStatus", () => toggleStatusVisibility("showGitStatus")),
     register("daily-notes.toggleEnableGit", () => toggleSetting("enableGit")),
-    register("daily-notes.commit", () => git.commit()),
+    register("daily-notes.commit", async () => {
+      await waitForGit();
+      await git.commit();
+    }),
     register("daily-notes.sync", async () => {
+      await waitForGit();
       await git.sync();
       void vscode.window.showInformationMessage("Daily Notes sync complete.");
     }),
     register("daily-notes.syncAndQuit", async () => {
       try {
+        await waitForGit();
         await git.sync();
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -102,7 +183,7 @@ export function activate(context: vscode.ExtensionContext) {
     register("daily-notes.resetAutoCommitInterval", resetAutoCommitInterval),
     register("daily-notes.toggleautoSync", () => toggleSetting("autoSync"))
   );
-  configure();
+  await configureNotebook();
 }
 
 function insertTimestamp() {
@@ -128,7 +209,7 @@ function insertTimestamp() {
 }
 
 async function getNotebookPath(): Promise<string | undefined> {
-  const configured = findWorkspaceDirectory(configManager.get("notebookPath"));
+  const configured = await findWorkspaceDirectory(configManager.get("notebookPath"));
   if (configured) {
     return configured.uri.fsPath;
   }
@@ -161,7 +242,7 @@ async function openOrCreateNote(notebookPath: string, filename: string, createCo
       }
     }
   }
-  if (!isMarkdownFileInDirectory(vscode.Uri.file(filePath), vscode.Uri.file(notebookPath))) {
+  if (!(await isMarkdownFileInDirectory(vscode.Uri.file(filePath), vscode.Uri.file(notebookPath)))) {
     throw new Error("The daily note must resolve to a file inside the notebook.");
   }
   await showNote(filePath);
@@ -169,7 +250,7 @@ async function openOrCreateNote(notebookPath: string, filename: string, createCo
 
 async function navigateNote(direction: "previous" | "next" | "lastYear") {
   await runNoteCommand(async () => {
-    const notebook = findWorkspaceDirectory(configManager.get("notebookPath"));
+    const notebook = await findWorkspaceDirectory(configManager.get("notebookPath"));
     const tabInput = vscode.window.tabGroups.activeTabGroup.activeTab?.input;
     const inPreview = tabInput instanceof vscode.TabInputWebview &&
       tabInput.viewType.replace(/^mainThreadWebview-/, "") === "markdown.preview";
@@ -182,7 +263,7 @@ async function navigateNote(direction: "previous" | "next" | "lastYear") {
     const period = fileName && notePeriodFromFilename(fileName);
     if (!notebook || !document || !fileName || !period || (direction === "lastYear" && period !== "day") ||
         path.relative(notebook.uri.fsPath, path.dirname(document.uri.fsPath)) !== "" ||
-        !isMarkdownFileInDirectory(document.uri, notebook.uri)) {
+        !(await isMarkdownFileInDirectory(document.uri, notebook.uri))) {
       if (inPreview && document) {
         await vscode.commands.executeCommand("markdown.showPreview", document.uri);
       }
@@ -198,7 +279,7 @@ async function navigateNote(direction: "previous" | "next" | "lastYear") {
       const lastYear = String(year).padStart(4, "0") + date.slice(4) + ".md";
       if (notePeriodFromFilename(lastYear, "day")) {
         const candidate = vscode.Uri.joinPath(notebook.uri, lastYear);
-        if (isMarkdownFileInDirectory(candidate, notebook.uri) &&
+        if (await isMarkdownFileInDirectory(candidate, notebook.uri) &&
             (await fs.promises.stat(candidate.fsPath)).isFile()) {
           target = candidate;
         }

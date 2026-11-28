@@ -1,6 +1,6 @@
 import { lstat, readdir } from "node:fs/promises";
 import { join } from "node:path";
-import { simpleGit, type SimpleGit } from "simple-git";
+import type { SimpleGit } from "simple-git";
 
 export class GitRepository {
   private queue = Promise.resolve();
@@ -62,6 +62,7 @@ export class GitRepository {
   private run(operation: (git: SimpleGit) => Promise<void>): Promise<void> {
     const result = this.queue.then(async () => {
       this.lifetime.signal.throwIfAborted();
+      const { simpleGit } = require("simple-git") as typeof import("simple-git");
       const git = simpleGit(this.notebookPath);
       const gitDir = (await git.raw("rev-parse", "--absolute-git-dir")).trimEnd();
       const files = await readdir(gitDir);

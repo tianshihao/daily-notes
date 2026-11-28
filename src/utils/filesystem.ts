@@ -1,27 +1,34 @@
 import * as vscode from "vscode";
-import * as fs from "node:fs";
+import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
-export function isExistingDirectory(directory: string): boolean {
+export async function isExistingDirectory(directory: string): Promise<boolean> {
   if (!path.isAbsolute(directory)) {
     return false;
   }
   try {
-    return fs.statSync(directory).isDirectory();
+    return (await fs.stat(directory)).isDirectory();
   } catch {
     return false;
   }
 }
 
-export function findWorkspaceDirectory(
+export function matchWorkspaceDirectory(
   directory: string,
   folders: readonly vscode.WorkspaceFolder[] | undefined = vscode.workspace.workspaceFolders
 ): vscode.WorkspaceFolder | undefined {
   if (!path.isAbsolute(directory)) {
     return undefined;
   }
-  const folder = folders?.find(item => path.relative(item.uri.fsPath, directory) === "");
-  return folder && isExistingDirectory(folder.uri.fsPath) ? folder : undefined;
+  return folders?.find(item => path.relative(item.uri.fsPath, directory) === "");
+}
+
+export async function findWorkspaceDirectory(
+  directory: string,
+  folders?: readonly vscode.WorkspaceFolder[]
+): Promise<vscode.WorkspaceFolder | undefined> {
+  const folder = matchWorkspaceDirectory(directory, folders);
+  return folder && await isExistingDirectory(folder.uri.fsPath) ? folder : undefined;
 }
 
 function containsPath(directory: string, file: string): boolean {
@@ -35,13 +42,14 @@ export function isInDirectory(resource: vscode.Uri, directory: vscode.Uri): bool
     containsPath(directory.fsPath, resource.fsPath);
 }
 
-export function isMarkdownFileInDirectory(resource: vscode.Uri, directory: vscode.Uri): boolean {
+export async function isMarkdownFileInDirectory(resource: vscode.Uri, directory: vscode.Uri): Promise<boolean> {
   if (path.extname(resource.fsPath).toLowerCase() !== ".md" || !isInDirectory(resource, directory)) {
     return false;
   }
-  // A link under the notebook may point outside it. Resolve it when selecting the editor.
+  // A link under the notebook may point outside it.
   try {
-    return containsPath(fs.realpathSync.native(directory.fsPath), fs.realpathSync.native(resource.fsPath));
+    const [root, file] = await Promise.all([fs.realpath(directory.fsPath), fs.realpath(resource.fsPath)]);
+    return containsPath(root, file);
   } catch {
     return false;
   }
