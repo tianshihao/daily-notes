@@ -5,10 +5,10 @@ import { NotebookStatusBar } from "../src/widget/notebook_status_bar";
 class RecordingItem implements vscode.StatusBarItem {
   text = "";
   name: string | undefined;
-  tooltip = undefined;
+  tooltip: vscode.StatusBarItem["tooltip"] = undefined;
   color = undefined;
   backgroundColor = undefined;
-  command = undefined;
+  command: vscode.StatusBarItem["command"] = undefined;
   accessibilityInformation = undefined;
   visible = false;
   disposed = false;
@@ -51,6 +51,7 @@ suite("Notebook status bar", () => {
     assert.equal(items.length, 1);
     const [item] = items;
     assert.equal(item.id, "dailyNotes.notebookStatus");
+    assert.equal(item.command, "daily-notes.showStatusBarActions");
     assert.equal(item.name, "Daily Notes: Notebook Status");
     assert.equal(item.alignment, vscode.StatusBarAlignment.Left);
     assert.equal(item.priority, 0);

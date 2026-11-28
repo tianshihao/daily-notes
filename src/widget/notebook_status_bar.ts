@@ -99,6 +99,8 @@ export class NotebookStatusBar implements vscode.Disposable {
     this.components = [this.documentStats, gitStatus];
     this.item = createItem("dailyNotes.notebookStatus", vscode.StatusBarAlignment.Left, 0);
     this.item.name = "Daily Notes: Notebook Status";
+    this.item.command = "daily-notes.showStatusBarActions";
+    this.item.tooltip = "Click to change Daily Notes settings";
   }
 
   scheduleEdit(event: vscode.TextDocumentChangeEvent, options: NotebookStatusOptions): void {

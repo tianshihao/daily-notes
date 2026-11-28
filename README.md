@@ -51,6 +51,8 @@ Only the active Markdown note is analyzed. Hiding Document Stats stops both coun
 
 On VS Code 1.90, a newly opened file must fit within 52,428,800 UTF-16 code units for VS Code to expose its text to extensions. An ordinary Han character uses one unit and a supplementary character such as `𠮷` uses two. This limit applies to each file individually. [VS Code text model](https://github.com/microsoft/vscode/blob/1.90.0/src/vs/editor/common/model/textModel.ts)
 
+Click the Daily Notes status bar item to view and toggle its display and Git settings.
+
 ## Optional Git sync
 
 Use an existing Git repository or initialize one in the notebook folder. Run **Daily Notes: Toggle Enable Git** to enable Git, start automatic commits, and leave automatic sync off. Switching notebooks in the same window also switches the repository used by these commands.

@@ -71,6 +71,7 @@ export function activate(context: vscode.ExtensionContext) {
     register("daily-notes.openSameDayLastYear", () => navigateDailyNote("lastYear")),
     register("daily-notes.setUpNotebook", setUpNotebook),
     register("daily-notes.insertTimestamp", insertTimestamp),
+    register("daily-notes.showStatusBarActions", showStatusBarActions),
     register("daily-notes.toggleDocumentStats", () => toggleStatusVisibility("showDocumentStats")),
     register("daily-notes.toggleGitStatus", () => toggleStatusVisibility("showGitStatus")),
     register("daily-notes.toggleEnableGit", toggleEnableGit),
@@ -449,6 +450,26 @@ async function openNotebookInNewWindow(notebookInfo: {
   );
 
   return true;
+}
+
+async function showStatusBarActions() {
+  const actions = [
+    { label: "Document Stats", key: "showDocumentStats", command: "daily-notes.toggleDocumentStats" },
+    { label: "Git Status", key: "showGitStatus", command: "daily-notes.toggleGitStatus" },
+    { label: "Git Integration", key: "enableGit", command: "daily-notes.toggleEnableGit" },
+    { label: "Auto Commit", key: "autoCommit", command: "daily-notes.toggleAutoCommit" },
+    { label: "Auto Sync", key: "autoSync", command: "daily-notes.toggleautoSync" },
+  ] as const;
+  const choice = await vscode.window.showQuickPick(
+    actions.map(action => ({
+      ...action,
+      description: configManager.get(action.key) ? "On" : "Off",
+    })),
+    { placeHolder: "Choose a Daily Notes setting to toggle" }
+  );
+  if (choice) {
+    await vscode.commands.executeCommand(choice.command);
+  }
 }
 
 function toggleStatusVisibility(key: "showDocumentStats" | "showGitStatus") {
