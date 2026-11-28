@@ -175,12 +175,22 @@ async function openDatedNote(notebookPath: string, date: string) {
 async function openAdjacentNote(direction: "previous" | "next") {
   await runNoteCommand(async () => {
     const notebook = findWorkspaceDirectory(configManager.get("notebookPath"));
-    const document = vscode.window.activeTextEditor?.document;
+    const tabInput = vscode.window.tabGroups.activeTabGroup.activeTab?.input;
+    const inPreview = tabInput instanceof vscode.TabInputWebview &&
+      tabInput.viewType.replace(/^mainThreadWebview-/, "") === "markdown.preview";
+    // The built-in preview tab does not expose its source URI through the tab API.
+    const editor = inPreview
+      ? await vscode.commands.executeCommand<vscode.TextEditor | undefined>("markdown.showSource")
+      : vscode.window.activeTextEditor;
+    const document = editor?.document;
     const fileName = document && path.basename(document.uri.fsPath);
     const date = fileName?.endsWith(".md") ? fileName.slice(0, -3) : undefined;
     if (!notebook || !document || !date || !parseNoteDate(date) ||
         path.relative(notebook.uri.fsPath, path.dirname(document.uri.fsPath)) !== "" ||
         !isMarkdownFileInDirectory(document.uri, notebook.uri)) {
+      if (inPreview && document) {
+        await vscode.commands.executeCommand("markdown.showPreview", document.uri);
+      }
       void vscode.window.showInformationMessage("Open a daily note in the notebook folder first.");
       return;
     }
@@ -188,9 +198,13 @@ async function openAdjacentNote(direction: "previous" | "next") {
     const adjacent = direction === "previous"
       ? dates.reverse().find(candidate => candidate < date)
       : dates.find(candidate => candidate > date);
-    if (adjacent) {
+    if (inPreview) {
+      const target = adjacent ? vscode.Uri.joinPath(notebook.uri, adjacent + ".md") : document.uri;
+      await vscode.commands.executeCommand("markdown.showPreview", target);
+    } else if (adjacent) {
       await showNote(path.join(notebook.uri.fsPath, adjacent + ".md"));
-    } else {
+    }
+    if (!adjacent) {
       void vscode.window.showInformationMessage(`There is no ${direction} daily note.`);
     }
   });
