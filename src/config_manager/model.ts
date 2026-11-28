@@ -12,5 +12,3 @@ export interface IConfigurationKeyTypeMap {
   autoCommitInterval: number;
   autoSync: boolean;
 }
-
-export type IConfigurationKnownKey = keyof IConfigurationKeyTypeMap;

@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { configManager } from "../config_manager/config_manager";
 import { Logger } from "../utils/logger";
 import { isInDirectory } from "../utils/filesystem";
-import { dateTime } from "../utils/datetime";
+import { getTimestamp } from "../utils/datetime";
 import { AutoCommitScheduler, isValidCommitInterval } from "./auto_commit";
 import { GitRepository } from "./git_repository";
 
@@ -71,7 +71,7 @@ export class GitService implements vscode.Disposable {
 
   private commitMessage(): string {
     const prefix = configManager.get("commitMessage") || "Auto commited by Daily Notes";
-    return `${prefix} at ${dateTime.getTimestamp()}`;
+    return `${prefix} at ${getTimestamp()}`;
   }
 
   private async runAutomatically(): Promise<void> {

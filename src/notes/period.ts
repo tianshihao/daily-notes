@@ -9,8 +9,11 @@ export function getNotePeriod(period: NotePeriod, now: Date) {
   let heading: string;
   let suffix: string = period;
   switch (period) {
-    case "day":
-      return { filename: format(start) + ".md", date: start };
+    case "day": {
+      const date = format(start);
+      const weekday = start.toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" });
+      return { filename: date + ".md", heading: `${date} ${weekday}` };
+    }
     case "week": {
       start.setUTCDate(start.getUTCDate() - (start.getUTCDay() + 6) % 7);
       const sunday = new Date(start);

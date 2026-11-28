@@ -1,6 +1,5 @@
 import { setUpNotebook } from "./notes/notebook_setup";
 import { getNotePeriod, type NotePeriod } from "./notes/period";
-import { docTemplate } from "./doc_template/doc_template";
 import { configManager } from "./config_manager/config_manager";
 import { GitService } from "./git_service/git_service";
 import { Logger } from "./utils/logger";
@@ -133,10 +132,7 @@ async function openCurrentNote(period: NotePeriod) {
   await runNoteCommand(async () => {
     const notebookPath = await getNotebookPath();
     if (notebookPath) {
-      const content = note.heading === undefined
-        ? docTemplate.generateContent("dailyNote", note.date)
-        : `# ${note.heading}\n`;
-      await openOrCreateNote(notebookPath, note.filename, content);
+      await openOrCreateNote(notebookPath, note.filename, `# ${note.heading}\n`);
     }
   });
 }
