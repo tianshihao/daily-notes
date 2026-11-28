@@ -73,7 +73,7 @@ Open VS Code Settings and search for `dailyNotes`.
 | `dailyNotes.showGitStatus` | `true` | Show the Git status item for Markdown notes. |
 | `dailyNotes.enableGit` | `false` | Enable Git integration for the notebook. |
 | `dailyNotes.autoCommit` | `false` | Schedule local commits. |
-| `dailyNotes.autoCommitInterval` | `10` | Minutes between automatic commits. The interval command accepts 2–600. |
+| `dailyNotes.autoCommitInterval` | `10` | Minutes between automatic commits. The interval command accepts 3–600. Existing 2-minute settings run at 3 minutes. |
 | `dailyNotes.commitMessage` | `Auto commited by Daily Notes` | Prefix for commit messages. The extension appends a timestamp. |
 | `dailyNotes.autoSync` | `false` | Sync with the remote after a commit. |
 

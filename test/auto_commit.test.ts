@@ -45,7 +45,7 @@ suite("Automatic commits", () => {
     let finish!: () => void;
     const pending = new Promise<void>((resolve) => { finish = resolve; });
     let replacements = 0;
-    scheduler.schedule(2, () => pending);
+    scheduler.schedule(3, () => pending);
     const running = fire();
     scheduler.schedule(600, async () => { replacements++; });
     assert.equal(timers.size, 0);
@@ -60,7 +60,7 @@ suite("Automatic commits", () => {
     const { scheduler, timers, fire } = setupTimer();
     let finish!: () => void;
     const pending = new Promise<void>((resolve) => { finish = resolve; });
-    scheduler.schedule(2, () => pending);
+    scheduler.schedule(3, () => pending);
     const running = fire();
     scheduler.dispose();
     finish();
@@ -70,8 +70,8 @@ suite("Automatic commits", () => {
 
   test("invalid intervals cancel an already pending timer", () => {
     const { scheduler, timers } = setupTimer();
-    for (const minutes of [0, 1, 2.5, 601, Infinity, NaN]) {
-      scheduler.schedule(2, async () => {});
+    for (const minutes of [0, 1, 2, 2.5, 601, Infinity, NaN]) {
+      scheduler.schedule(3, async () => {});
       scheduler.schedule(minutes, async () => {});
       assert.equal(timers.size, 0);
     }

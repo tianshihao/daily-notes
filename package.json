@@ -168,7 +168,7 @@
         },
         "dailyNotes.autoCommitInterval": {
           "type": "integer",
-          "minimum": 2,
+          "minimum": 3,
           "maximum": 600,
           "default": 10,
           "description": "The interval in minutes to automatically commit daily notes."

@@ -34,7 +34,8 @@ export class GitService implements vscode.Disposable {
       this.session = { folder, repository };
     }
 
-    const minutes = configManager.get("autoCommitInterval");
+    const configuredMinutes = configManager.get("autoCommitInterval");
+    const minutes = configuredMinutes === 2 ? 3 : configuredMinutes;
     const interval = configManager.get("autoCommit") && isValidCommitInterval(minutes) ? minutes : undefined;
     if (interval !== this.interval) {
       this.interval = interval;

@@ -6,7 +6,7 @@ const setTimer: SetTimer = (milliseconds, callback) => {
 };
 
 export function isValidCommitInterval(minutes: number): boolean {
-  return Number.isInteger(minutes) && minutes >= 2 && minutes <= 600;
+  return Number.isInteger(minutes) && minutes >= 3 && minutes <= 600;
 }
 
 export class AutoCommitScheduler {

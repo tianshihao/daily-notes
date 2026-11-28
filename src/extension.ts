@@ -497,13 +497,14 @@ function toggleSetting(key: "autoCommit" | "autoSync") {
 }
 
 async function resetAutoCommitInterval() {
+  const current = configManager.get("autoCommitInterval");
   const interval = await vscode.window.showInputBox({
     prompt: "Minutes between automatic commits",
-    value: String(configManager.get("autoCommitInterval")),
+    value: String(current === 2 ? 3 : current),
     validateInput: (text) => {
       const minutes = Number(text);
       return isValidCommitInterval(minutes)
-        ? undefined : "Enter a whole number between 2 and 600.";
+        ? undefined : "Enter a whole number between 3 and 600.";
     },
   });
   if (interval !== undefined) {
