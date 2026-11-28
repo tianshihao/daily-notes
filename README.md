@@ -21,6 +21,17 @@ Open today's Markdown note in VS Code with a single command. Run it again later 
 2. On first use, choose **Create** to make a notebook folder or **Update** to select an existing folder. Choose **Current** to use that folder in the current workspace.
 3. Start writing. For example, on November 22, 2026, the command opens `2026-11-22.md` in the notebook folder. A new note starts with the heading `# 2026-11-22 Sun`.
 
+The Command Palette also offers **Open This Week's Weekly Note**, **Open This Month's Monthly Note**, **Open This Quarter's Quarterly Note**, and **Open This Year's Yearly Note** under **Daily Notes**. Each command opens the corresponding file in the notebook root and creates it if missing.
+
+| Period | Example filename |
+| --- | --- |
+| Week | `2026-11-23.W48.md` |
+| Month | `2026-11-01.month.md` |
+| Quarter | `2026-10-01.quarter.md` |
+| Year | `2026-01-01.year.md` |
+
+The filename starts with the local calendar date on which the period begins. Weekly notes start on Monday and use the two-digit ISO week number. A new weekly note's heading shows the full Monday–Sunday date range.
+
 Use **Daily Notes: Insert Timestamp** to mark an entry.
 
 From a dated note in the notebook root, use **Daily Notes: Previous Daily Note** or **Daily Notes: Next Daily Note** to jump between existing notes by date. Both commands skip days without notes.
@@ -76,7 +87,7 @@ Open VS Code Settings and search for `dailyNotes`.
 
 2. Open the cloned folder in VS Code. In Extensions, search for `@recommended` and enable **esbuild Problem Matchers**. The default debug task uses it to detect when the bundle is ready. The [workspace recommendations](.vscode/extensions.json) also include editor, Git, and appearance tools.
 3. In **Run and Debug**, select **Run Extension** and press **F5**. Keep the source window open. A second window titled **Extension Development Host** loads your local build.
-4. Open a folder for test notes in the **development host**. In the **source window**, set a breakpoint on the first statement in `openTodaysDailyNote()` in [src/extension.ts](src/extension.ts). Run **Daily Notes: Open Today's Daily Note** in the development host. The debugger pauses in the source window. Press **F5** to continue.
+4. Open a folder for test notes in the **development host**. In the **source window**, set a breakpoint on the first statement in `openCurrentNote()` in [src/extension.ts](src/extension.ts). Run **Daily Notes: Open Today's Daily Note** in the development host. The debugger pauses in the source window. Press **F5** to continue.
 5. Edit and save a TypeScript file. The watch tasks rebuild it. Run **Developer: Reload Window** in the development host and invoke the command again to try the change.
 
 The extension code lives in `src/` and its test suites and fixtures live in `test/`. Run `npm run compile` for type checking, linting, and bundling. Run `npm test` to compile and execute the extension tests. On first use the runner downloads VS Code 1.90.0, the oldest version this extension supports.

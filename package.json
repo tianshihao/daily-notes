@@ -43,6 +43,26 @@
         "category": "Daily Notes"
       },
       {
+        "command": "daily-notes.openThisWeeksWeeklyNote",
+        "title": "Open This Week's Weekly Note",
+        "category": "Daily Notes"
+      },
+      {
+        "command": "daily-notes.openThisMonthsMonthlyNote",
+        "title": "Open This Month's Monthly Note",
+        "category": "Daily Notes"
+      },
+      {
+        "command": "daily-notes.openThisQuartersQuarterlyNote",
+        "title": "Open This Quarter's Quarterly Note",
+        "category": "Daily Notes"
+      },
+      {
+        "command": "daily-notes.openThisYearsYearlyNote",
+        "title": "Open This Year's Yearly Note",
+        "category": "Daily Notes"
+      },
+      {
         "command": "daily-notes.previousDailyNote",
         "title": "Previous Daily Note",
         "category": "Daily Notes"

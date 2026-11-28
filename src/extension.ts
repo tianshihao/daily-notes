@@ -1,3 +1,4 @@
+import { getNotePeriod, type NotePeriod } from "./notes/period";
 import { configManager } from "./config_manager/config_manager";
 import { docTemplate } from "./doc_template/doc_template";
 import { GitService } from "./git_service/git_service";
@@ -60,7 +61,11 @@ export function activate(context: vscode.ExtensionContext) {
       }
     }),
     register("daily-notes.helloWorld", () => vscode.window.showInformationMessage("Hello World from Daily Notes!")),
-    register("daily-notes.openTodaysDailyNote", openTodaysDailyNote),
+    register("daily-notes.openTodaysDailyNote", () => openCurrentNote("day")),
+    register("daily-notes.openThisWeeksWeeklyNote", () => openCurrentNote("week")),
+    register("daily-notes.openThisMonthsMonthlyNote", () => openCurrentNote("month")),
+    register("daily-notes.openThisQuartersQuarterlyNote", () => openCurrentNote("quarter")),
+    register("daily-notes.openThisYearsYearlyNote", () => openCurrentNote("year")),
     register("daily-notes.previousDailyNote", () => openAdjacentNote("previous")),
     register("daily-notes.nextDailyNote", () => openAdjacentNote("next")),
     register("daily-notes.setUpNotebook", setUpNotebook),
@@ -126,17 +131,15 @@ async function getNotebookPath(): Promise<string | undefined> {
   }
 }
 
-async function openTodaysDailyNote() {
-  const now = new Date();
-  const today = [
-    String(now.getFullYear()).padStart(4, "0"),
-    String(now.getMonth() + 1).padStart(2, "0"),
-    String(now.getDate()).padStart(2, "0"),
-  ].join("-");
+async function openCurrentNote(period: NotePeriod) {
+  const note = getNotePeriod(period, new Date());
   await runNoteCommand(async () => {
     const notebookPath = await getNotebookPath();
     if (notebookPath) {
-      await openDatedNote(notebookPath, today);
+      const content = note.heading === undefined
+        ? docTemplate.generateContent("dailyNote", note.date)
+        : `# ${note.heading}\n`;
+      await openOrCreateNote(notebookPath, note.filename, content);
     }
   });
 }
@@ -150,8 +153,8 @@ async function listDailyNotes(notebookPath: string): Promise<string[]> {
     .sort();
 }
 
-async function openDatedNote(notebookPath: string, date: string) {
-  const filePath = path.join(notebookPath, date + ".md");
+async function openOrCreateNote(notebookPath: string, filename: string, content: string) {
+  const filePath = path.join(notebookPath, filename);
   try {
     await fs.promises.stat(filePath);
   } catch (error) {
@@ -159,7 +162,7 @@ async function openDatedNote(notebookPath: string, date: string) {
       throw error;
     }
     try {
-      await fs.promises.writeFile(filePath, docTemplate.generateContent("dailyNote", parseNoteDate(date)), { flag: "wx" });
+      await fs.promises.writeFile(filePath, content, { flag: "wx" });
     } catch (writeError) {
       if ((writeError as NodeJS.ErrnoException).code !== "EEXIST") {
         throw writeError;
