@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.1 (2026-11-28)
+
+- Reduce activation work by loading dependencies on demand and checking notebook paths asynchronously.
+- Find adjacent notes in a single pass through the notebook directory.
+- Refresh word counts promptly and wait for typing to pause before rechecking the note language.
+- Set up a Git remote when enabling Auto Sync. The prompt stays open until Git finishes writing the configuration.
+- Report routine sync failures in **Output → Daily Notes**. **Sync and Quit** also shows an error and keeps VS Code open if sync fails.
+- Add Marketplace search keywords for daily notes, journaling, and Markdown.
+
 ## 1.0.0 (2026-11-28)
 
 - Open weekly, monthly, quarterly, and yearly notes by their period start date. Weekly filenames include the ISO week number.
