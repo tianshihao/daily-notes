@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import type { IConfigurationKeyTypeMap } from "../config_manager/model";
 import { DocumentAnalyzer } from "../document_analysis/document_analyzer";
+import { Logger } from "../utils/logger";
 
 export type NotebookStatusOptions = Pick<IConfigurationKeyTypeMap,
   "notebookName" | "showDocumentStats" | "showGitStatus" | "enableGit" | "autoCommit" | "autoSync"
@@ -78,7 +79,7 @@ class DocumentStats implements StatusComponent {
       if (this.pending === task) {
         this.pending = undefined;
         if (document.version === task.version) {
-          console.error("Daily Notes could not analyze the document", error);
+          Logger.error("Document Stats", error);
           task.update("Words: — · Language: —");
         }
       }

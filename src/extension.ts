@@ -76,6 +76,24 @@ export async function activate(context: vscode.ExtensionContext) {
     } while (pending !== gitCheck);
   }
 
+  async function runSync(operation: "Sync" | "Sync and Quit" | "Sync after Commit") {
+    try {
+      await waitForGit();
+      await git.sync();
+    } catch (error) {
+      const detail = Logger.error(`Git / ${operation}`, error);
+      if (operation === "Sync and Quit") {
+        void vscode.window.showErrorMessage(`Daily Notes could not sync. VS Code will stay open. ${detail}`);
+      }
+      return;
+    }
+    if (operation === "Sync and Quit") {
+      await vscode.commands.executeCommand("workbench.action.quit");
+    } else if (operation === "Sync") {
+      void vscode.window.showInformationMessage("Daily Notes sync complete.");
+    }
+  }
+
   function configureStatus() {
     statusOptions = {
       notebookName: configManager.get("notebookName"),
@@ -160,25 +178,14 @@ export async function activate(context: vscode.ExtensionContext) {
     register("daily-notes.toggleEnableGit", () => toggleSetting("enableGit")),
     register("daily-notes.commit", async () => {
       await waitForGit();
-      await git.commit();
-    }),
-    register("daily-notes.sync", async () => {
-      await waitForGit();
-      await git.sync();
-      void vscode.window.showInformationMessage("Daily Notes sync complete.");
-    }),
-    register("daily-notes.syncAndQuit", async () => {
-      try {
-        await waitForGit();
-        await git.sync();
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        Logger.error(`Sync and Quit failed: ${message}`);
-        void vscode.window.showErrorMessage(`Daily Notes could not sync. VS Code will stay open. ${message}`);
+      if (configManager.get("autoSync")) {
+        await runSync("Sync after Commit");
         return;
       }
-      await vscode.commands.executeCommand("workbench.action.quit");
+      await git.commit();
     }),
+    register("daily-notes.sync", () => runSync("Sync")),
+    register("daily-notes.syncAndQuit", () => runSync("Sync and Quit")),
     register("daily-notes.toggleAutoCommit", () => toggleSetting("autoCommit")),
     register("daily-notes.resetAutoCommitInterval", resetAutoCommitInterval),
     register("daily-notes.toggleautoSync", () => toggleSetting("autoSync"))
@@ -316,7 +323,7 @@ async function navigateNote(direction: "previous" | "next" | "lastYear") {
         : `There is no ${direction} note for this period type.`;
       void vscode.window.showInformationMessage(message);
     }
-  });
+  }, "navigate to the note");
 }
 
 async function showNote(filePath: string) {
@@ -324,12 +331,12 @@ async function showNote(filePath: string) {
   await vscode.window.showTextDocument(document);
 }
 
-async function runNoteCommand(action: () => Promise<void>, operation = "open the daily note") {
+async function runNoteCommand(action: () => Promise<void>, operation = "open the note") {
   try {
     await action();
   } catch (error) {
-    Logger.error(String(error));
-    void vscode.window.showErrorMessage(`Could not ${operation}. ${String(error)}`);
+    const detail = Logger.error(`Notes / ${operation.charAt(0).toUpperCase()}${operation.slice(1)}`, error);
+    void vscode.window.showErrorMessage(`Could not ${operation}. ${detail}`);
   }
 }
 

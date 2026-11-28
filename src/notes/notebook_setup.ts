@@ -4,6 +4,7 @@ import type { ParseError } from "jsonc-parser";
 import * as vscode from "vscode";
 import { configManager } from "../config_manager/config_manager";
 import { findWorkspaceDirectory } from "../utils/filesystem";
+import { Logger } from "../utils/logger";
 
 interface NotebookFolder {
   path: string;
@@ -42,7 +43,8 @@ export async function setUpNotebook(): Promise<string | undefined> {
     await configManager.update("notebookName", notebook.name, vscode.ConfigurationTarget.Workspace);
     return notebook.path;
   } catch (error) {
-    void vscode.window.showErrorMessage(`Could not set up the notebook. ${String(error)}`);
+    const detail = Logger.error("Notebook / Setup", error);
+    void vscode.window.showErrorMessage(`Could not set up the notebook. ${detail}`);
   }
 }
 

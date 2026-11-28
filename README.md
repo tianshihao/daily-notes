@@ -87,7 +87,7 @@ Use an existing Git repository or initialize one in the notebook folder. Enable 
 
 - **Daily Notes: Commit** saves open, modified documents under the notebook folder and commits changes within it, including new and deleted files. Files already staged elsewhere in the same repository stay staged.
 - **Daily Notes: Sync** first commits notebook changes locally, then fetches the checked-out branch's upstream (for example, `origin/main`). It fast-forwards a branch that is behind or pushes one that is ahead. If both sides have new commits, it stops so you can reconcile them in Git. Sync applies to the whole branch, including any earlier local commits. Use `git branch -vv` to see which upstream your branch tracks.
-- **Daily Notes: Sync and Quit** runs the same sync immediately and quits VS Code after it succeeds. A sync failure keeps VS Code open and shows the reason.
+- **Daily Notes: Sync and Quit** runs the same sync immediately and quits VS Code after it succeeds. A sync failure keeps VS Code open and shows the reason. Other sync failures are recorded in **Output → Daily Notes**.
 - Use **Daily Notes: Toggle Auto Commit** to switch between manual and scheduled commits, and **Daily Notes: Toggle Auto Sync** to sync after commits.
 
 ## Settings

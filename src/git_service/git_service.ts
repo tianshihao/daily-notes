@@ -75,13 +75,15 @@ export class GitService implements vscode.Disposable {
 
   private async runAutomatically(): Promise<void> {
     const session = this.session;
+    const sync = configManager.get("autoSync");
     try {
       await this.commit();
     } catch (error) {
       if (session === this.session) {
-        const message = `Daily Notes automatic Git operation failed: ${error instanceof Error ? error.message : error}`;
-        Logger.error(message);
-        void vscode.window.showErrorMessage(message);
+        const detail = Logger.error(sync ? "Git / Auto Sync" : "Git / Auto Commit", error);
+        if (!sync) {
+          void vscode.window.showErrorMessage(`Daily Notes could not automatically commit. ${detail}`);
+        }
       }
     }
   }
