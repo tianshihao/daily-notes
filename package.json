@@ -10,6 +10,11 @@
   "categories": [
     "Other"
   ],
+  "keywords": [
+    "daily notes",
+    "journal",
+    "markdown"
+  ],
   "activationEvents": [
     "onStartupFinished"
   ],
