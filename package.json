@@ -216,7 +216,7 @@
     "package": "npm run check-types && npm run lint && node esbuild.js --production",
     "compile-tests": "tsc -p . --outDir out",
     "watch-tests": "tsc -p . -w --outDir out",
-    "pretest": "npm run compile-tests && npm run compile && npm run lint",
+    "pretest": "npm run compile-tests && npm run lint && node esbuild.js",
     "check-types": "tsc --noEmit",
     "lint": "eslint src test --ext ts",
     "test": "vscode-test"
